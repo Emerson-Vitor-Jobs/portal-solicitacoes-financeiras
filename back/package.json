@@ -13,7 +13,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "./scripts/test-integration.sh",
     "gen:sql": "./scripts/gen-sql.sh",
     "gen:openapi": "tsx scripts/gen-openapi.ts"
   },
