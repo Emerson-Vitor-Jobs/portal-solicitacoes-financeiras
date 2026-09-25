@@ -12,17 +12,17 @@ Localmente: em `back/`, `npm run test:unit` e `npm run test:integration` (precis
 
 ## Estratégia: cobertura por comportamento, não por porcentagem
 
-Não há meta de cobertura. O esforço vai concentrado nos pontos em que um erro vira **dado errado**: dinheiro,
-duplicidade, transição, concorrência e datas. A régua é a confiança, não a quantidade (§9.5).
+Não há meta de cobertura (§9.5). O esforço está nos pontos em que um erro vira dado errado: dinheiro, duplicidade,
+transição, concorrência e datas.
 
 | Nível | Ferramenta | O que prova |
 | --- | --- | --- |
-| **Unitário (lógica pura)** | Vitest, tabelas de casos | `parseBRLToCents`, CNPJ (numérico e alfanumérico), regras de data, tabela de transições |
-| **Unitário (service)** | Vitest + **fakes escritos à mão** que implementam a porta do repositório | regras de negócio sem banco: papéis, travas de pagamento, normalização, erros de domínio |
-| **HTTP** | `app.inject()` do Fastify (sem abrir porta) | status, formato RFC 9457, CSRF, rate limit, sessão, headers |
-| **Integração** | **PostgreSQL real** (`gex_finance_it`), `TRUNCATE` entre testes, em série | `UNIQUE` e compare-and-set **com conexões concorrentes de verdade**, filtros SQL, snapshot da paginação, trigger append-only, dashboard contra o oráculo oficial |
-| **Componentes** | Testing Library + user-event + **MSW** | telas reais contra uma API falsa que exige o header anti-CSRF e responde no formato do contrato |
-| **Contrato** | teste de igualdade no back + teste de tipos no front | o `openapi.json` commitado é exatamente o que as rotas geram; o front não compila se o contrato mudar |
+| Unitário (lógica pura) | Vitest, tabelas de casos | `parseBRLToCents`, CNPJ (numérico e alfanumérico), regras de data, tabela de transições |
+| Unitário (service) | Vitest + fakes escritos à mão que implementam a porta do repositório | regras de negócio sem banco: papéis, travas de pagamento, normalização, erros de domínio |
+| HTTP | `app.inject()` do Fastify (sem abrir porta) | status, formato RFC 9457, CSRF, rate limit, sessão, headers |
+| Integração | PostgreSQL real (`gex_finance_it`), `TRUNCATE` entre testes, em série | `UNIQUE` e compare-and-set com conexões concorrentes de verdade, filtros SQL, snapshot da paginação, trigger append-only, dashboard contra o oráculo oficial |
+| Componentes | Testing Library + user-event + MSW | telas reais contra uma API falsa que exige o header anti-CSRF e responde no formato do contrato |
+| Contrato | teste de igualdade no back + teste de tipos no front | o `openapi.json` commitado é exatamente o que as rotas geram; o front não compila se o contrato mudar |
 
 **Por que o banco de teste é separado:** o teste do dashboard espera exatamente R$ 8.750,49. Uma solicitação criada
 por outro teste mudaria o número, e o `TRUNCATE` apagaria os dados de quem usa o app. **Sem `DATABASE_URL`, a

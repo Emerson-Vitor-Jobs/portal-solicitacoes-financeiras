@@ -1,7 +1,7 @@
 # Decisões de arquitetura
 
-Cada decisão foi tomada antes do código, com as alternativas consideradas, o motivo da escolha e as fontes (RFCs,
-OWASP, documentação oficial). O registro completo está em [`DECISOES_FUNDACAO.md`](DECISOES_FUNDACAO.md).
+As decisões foram tomadas antes do código. Cada uma registra as alternativas consideradas, o motivo da escolha e as
+fontes (RFCs, OWASP, documentação oficial). O registro completo está em [`DECISOES_FUNDACAO.md`](DECISOES_FUNDACAO.md).
 
 | § | Decisão | Escolha, em uma linha |
 | --- | --- | --- |
@@ -23,6 +23,7 @@ OWASP, documentação oficial). O registro completo está em [`DECISOES_FUNDACAO
 | 16 | Padrões de arquitetura | camadas + Ports and Adapters no lado de saída, Unit of Work, Transaction Script; sem DDD/CQRS |
 | 17 | Sistema visual | paleta e tipografia do EasyPay (CC BY 4.0) num tema único; ilustrações Open Doodles (CC0) |
 
-**Pesquisas de apoio:** [`PESQUISA_HTTP.md`](PESQUISA_HTTP.md) (RFC 9110/9111 aplicadas às decisões de status e
-cache) · [`SQL_FIRST_VS_QUERY_BUILDERS.md`](SQL_FIRST_VS_QUERY_BUILDERS.md) (por que SQL escrito à mão).
-**Stack de cada lado:** [`TECNOLOGIAS_BACK.md`](TECNOLOGIAS_BACK.md) · [`TECNOLOGIAS_FRONT.md`](TECNOLOGIAS_FRONT.md).
+Pesquisas de apoio: [`PESQUISA_HTTP.md`](PESQUISA_HTTP.md) (RFC 9110/9111 aplicadas às decisões de status e
+cache) e [`SQL_FIRST_VS_QUERY_BUILDERS.md`](SQL_FIRST_VS_QUERY_BUILDERS.md) (por que SQL escrito à mão).
+
+Stack de cada lado: [`TECNOLOGIAS_BACK.md`](TECNOLOGIAS_BACK.md) e [`TECNOLOGIAS_FRONT.md`](TECNOLOGIAS_FRONT.md).

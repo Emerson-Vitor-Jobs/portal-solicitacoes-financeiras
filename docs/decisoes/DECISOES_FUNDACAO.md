@@ -30,9 +30,9 @@ projeto/
   (`@fastify/swagger`, Swagger UI em `/docs`) → `openapi.json` commitado → tipos gerados no front
   (`openapi-typescript`) + client fino (`openapi-fetch`). Script `gen:api`.
   - Motivo: mesmo princípio do sqlc (contrato como artefato, código gerado, nada de tipo à mão). Se o back
-    mudar, o front para de compilar. E o Swagger UI permite explorar a API.
-- **Regra de camada:** o Zod valida **forma** no controller (tipo, obrigatório, formato). A **regra de
-  negócio** (DV do CNPJ, transição, duplicidade) fica no service/modules, testável sem HTTP.
+    mudar, o front para de compilar, e o Swagger UI permite explorar a API.
+- **Regra de camada:** o Zod valida a forma no controller (tipo, obrigatório, formato). A regra de
+  negócio (DV do CNPJ, transição, duplicidade) fica no service/modules, testável sem HTTP.
 - Fontes: [fastify-type-provider-zod](https://github.com/fastify/fastify-type-provider-zod) (org Fastify,
   Zod v4, `jsonSchemaTransform`), [openapi-typescript](https://github.com/openapi-ts/openapi-typescript),
   [openapi-fetch](https://openapi-ts.dev/openapi-fetch/).
@@ -49,17 +49,17 @@ só nas duas bordas:
 | Domínio → JSON | `handler/http/controller/*` | `toXResponse(entity)` |
 
 - Query params também em `snake_case`: `?status=PENDING&supplier=aurora&due_from=2026-09-01&due_to=2026-09-30`.
-- No front, os tipos gerados do OpenAPI já chegam em `snake_case` e são usados **direto**, sem remapear.
+- No front, os tipos gerados do OpenAPI já chegam em `snake_case` e são usados direto, sem remapear.
 
 **Por quê:**
 1. **O enunciado obriga `amount_cents`.** Uma API `camelCase` com essa única exceção seria inconsistente.
-   Com `snake_case` em toda a API, o campo obrigatório vira a regra, não a exceção.
+   Com `snake_case` em toda a API, o campo obrigatório segue a regra geral.
 2. **Seed, banco e API falam a mesma língua.** Os JSON do seed já são `snake_case`, então o avaliador
    compara os dados de entrada e de saída campo a campo, sem tradução mental.
 3. **Dentro do código, TypeScript idiomático.** `camelCase` é a convenção da linguagem e dos linters. Um
    domínio em `snake_case` seria o formato do banco vazando pra regra de negócio.
 4. **É o modelo idiomático em linguagens tipadas como Go.** Em Go, o campo da struct é `CamelCase` e a tag é `json:"snake_case"`. Aqui a tag
-   vira a função de borda, e o princípio é o mesmo: o formato externo é detalhe de serialização, não de domínio.
+   vira a função de borda, e o princípio é o mesmo: o formato externo é detalhe de serialização e fica fora do domínio.
 5. **Isolamento de mudança.** Renomear uma coluna mexe só no `mapX()`. Mudar o contrato público mexe só no
    `toXResponse()` e no schema. O domínio não se move em nenhum dos casos.
 6. **Custo baixo e conhecido.** São 3 funções de resposta no projeto inteiro (solicitação, evento de auditoria
@@ -89,8 +89,8 @@ Toda resposta de erro sai com `Content-Type: application/problem+json`:
   reconhecido → 500 com `code: INTERNAL` e `detail` genérico. A mensagem interna vai só pro log.
 
 **Por quê:**
-1. **É norma IETF, não invenção.** A RFC 9457 substitui a 7807. O avaliador reconhece o formato na hora, e
-   ele tem a mesma quantidade de campos de um formato caseiro. Escolher a norma custa zero.
+1. **É norma IETF.** A RFC 9457 substitui a 7807. O avaliador reconhece o formato na hora, e ele tem tantos
+   campos quanto um formato caseiro, então adotar a norma não custa nada.
 2. **`code` separa máquina de humano.** O front decide o comportamento pelo `code` (ex.: `DUPLICATE_INVOICE`
    marca o campo da nota), nunca pelo texto de `detail`. O texto pode mudar sem quebrar o front.
 3. **`errors` por campo** permite ao formulário apontar exatamente o input inválido. A própria RFC mostra
@@ -104,10 +104,10 @@ Toda resposta de erro sai com `Content-Type: application/problem+json`:
 
 `GET /requests?page=1&page_size=20&...` → `{ data, page, page_size, total, total_pages }`
 
-- `page` ≥ 1 (padrão 1). `page_size` padrão 20, **máximo 100**, validado no Zod. O service traduz para
+- `page` ≥ 1 (padrão 1). `page_size` padrão 20, máximo 100, validado no Zod. O service traduz para
   `LIMIT page_size OFFSET (page-1)*page_size`.
 - **Ordenação estável:** `ORDER BY created_at DESC, id DESC`.
-- **Total consistente:** a query da página e a do total rodam na **mesma transação `REPEATABLE READ READ ONLY`**
+- **Total consistente:** a query da página e a do total rodam na mesma transação `REPEATABLE READ READ ONLY`
   (mesmo snapshot), com o mesmo `WHERE`.
 - Página além da última → `data: []` com o `total` correto (não é erro).
 
@@ -115,15 +115,15 @@ Toda resposta de erro sai com `Content-Type: application/problem+json`:
 1. **Casa com a UI.** A tela tem páginas numeradas. Com `page`, o cliente não consegue mandar um offset
    "quebrado" (ex.: 7 com página de 20). Quem faz a conta é o backend, uma vez só.
 2. **O teto de 100** evita que um cliente peça a tabela inteira de uma vez.
-3. **O desempate por `id`** é o que torna a paginação determinística. Com só `created_at`, duas linhas com o
+3. **O desempate por `id`** torna a paginação determinística. Com só `created_at`, duas linhas com o
    mesmo instante podem trocar de ordem entre requisições, duplicando ou sumindo entre páginas.
-4. **Por que a transação e não `COUNT(*) OVER()`:** o `COUNT(*) OVER()` numa query só é elegante, mas numa
-   página além da última volta zero linhas, e junto se perde o total. Duas queries no mesmo snapshot
+4. **Por que a transação e não `COUNT(*) OVER()`:** o `COUNT(*) OVER()` resolve tudo numa query só, mas numa
+   página além da última não volta nenhuma linha, e o total se perde junto. Duas queries no mesmo snapshot
    `REPEATABLE READ` dão o total certo sempre e mantêm cada query simples no PgTyped.
 5. **Por que não cursor:** o keyset escala melhor, mas tira o "ir pra página 3" e o total. Com 16 linhas de
    seed, seria complexidade sem problema real pra resolver.
-6. **Por que não `limit/offset` na API:** a semântica é a mesma (o SQL continua `LIMIT/OFFSET`). Só a borda
-   da API fala a língua da tela.
+6. **Por que não `limit/offset` na API:** a semântica é a mesma (o SQL continua `LIMIT/OFFSET`); só a borda
+   da API muda, para usar o vocabulário da tela.
 
 ## 5. Status HTTP — parte 1 FECHADA
 
@@ -136,8 +136,8 @@ Base: [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html). Pesquisa completa
 - **422** `VALIDATION_FAILED` + `errors[]`: o corpo é lido mas viola a regra (campo ausente, CNPJ com DV errado,
   valor ≤ 0, rejeitar sem motivo, pagar sem referência). A §15.5.21 diz "the syntax … is correct, but it was
   unable to process the contained instructions".
-- **Por quê:** é a distinção que a própria RFC faz, com os próprios exemplos. E não custa compatibilidade:
-  pela §15, um cliente que não conhece o 422 o trata como 400.
+- **Por quê:** a própria RFC faz essa distinção, com esses exemplos, e ela não custa compatibilidade: pela §15,
+  um cliente que não conhece o 422 o trata como 400.
 
 ### 5.2 Login: `POST /auth/login`
 | Caso | Status | `code` |
@@ -148,19 +148,19 @@ Base: [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html). Pesquisa completa
 | JSON inválido | 400 | `VALIDATION_FAILED` |
 
 - **Por quê:** a requisição está bem formada, uma identidade foi informada e as credenciais
-  não são válidas. A semântica é de falha de autenticação, e o 401 é o código dela. O 422 fica reservado para
-  violação de regra no payload, não para tentativa de autenticação com credencial inválida.
+  não são válidas. A semântica é de falha de autenticação, cujo código é o 401. O 422 fica reservado para
+  violação de regra no payload.
 - **Contraponto registrado:** uma leitura estrita da §15.5.2 diz que `/auth/login` não exige autenticação e que
-  a senha viaja no corpo como dado. Escolhemos a semântica de "falha de autenticação". O 401 sai **sem**
+  a senha viaja no corpo como dado. Escolhemos a semântica de "falha de autenticação". O 401 sai sem
   `WWW-Authenticate`, pelo mesmo motivo da 5.3.
-- **Resposta idêntica** para "usuário não existe" e "senha errada", pra não revelar quais emails existem.
-  Isso vale também para o **tempo de resposta**: quando o usuário não existe, o servidor verifica a senha contra
+- A resposta é idêntica para "usuário não existe" e "senha errada", pra não revelar quais emails existem.
+  Isso vale também para o tempo de resposta: quando o usuário não existe, o servidor verifica a senha contra
   um hash argon2 fictício, e os dois caminhos levam o mesmo tempo (anti-enumeração por timing, OWASP
   Authentication Cheat Sheet).
 - O corpo segue a RFC 9457 da decisão 4 (`detail`, não `message`).
 
 ### 5.3 Rota protegida sem sessão válida: 401, sem `WWW-Authenticate` (desvio consciente da RFC)
-- **401** `UNAUTHENTICATED`, corpo RFC 9457. **Nenhum header `WWW-Authenticate`.** Vale também para o 401 do login (5.2).
+- **401** `UNAUTHENTICATED`, corpo RFC 9457, sem header `WWW-Authenticate`. Vale também para o 401 do login (5.2).
 - O front trata pelo status + `code`: `UNAUTHENTICATED` → redireciona pra tela de login ("Sua sessão expirou");
   `INVALID_CREDENTIALS` → mensagem na tela de login.
 
@@ -172,16 +172,16 @@ Base: [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html). Pesquisa completa
 3. **Login por formulário + cookie é autenticação de aplicação, fora desse framework.** O
    [registro IANA](https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml) não tem esquema para
    sessão por cookie. Qualquer valor que mandássemos seria um esquema inventado que nenhum cliente interpreta.
-4. **Um header que ninguém interpreta é cumprimento de fachada:** satisfaz a sintaxe da RFC sem entregar a
-   interoperabilidade que o MUST protege, e cria um pseudo-padrão ("GEX Session Authentication Scheme") que
-   alguém vai ter que explicar daqui a seis meses. É tecnicamente defensável, mas arquiteturalmente desnecessário.
+4. **Um header que ninguém interpreta cumpre a RFC só na fachada:** é defensável tecnicamente, mas satisfaz a
+   sintaxe sem entregar a interoperabilidade que o MUST protege, e cria um pseudo-padrão ("GEX Session
+   Authentication Scheme") que alguém vai ter que explicar daqui a seis meses.
 5. **O desafio não pede.** O enunciado fala em "sessão segura ou token" e em "status 4xx consistente", nada de
    `WWW-Authenticate`. O único consumidor do 401 é o nosso front, que decide pelo status e pelo `code`.
-6. **Quem é tocado pelo desvio:** nenhum cliente real. É o comportamento de praticamente toda API web com sessão
-   por cookie.
+6. **O desvio não afeta nenhum cliente real.** Praticamente toda API web com sessão por cookie se comporta
+   assim.
 - **Histórico:** a primeira versão desta decisão mandava `WWW-Authenticate: Session realm="gex"` para cumprir o MUST
-  à risca. Foi revista após a crítica de que isso criava um mini-protocolo sem valor. A diferença entre este
-  desvio e "violar em silêncio" é estar escrito aqui, com o motivo.
+  à risca. Foi revista após a crítica de que isso criava um mini-protocolo sem valor. Estar registrado aqui, com o
+  motivo, é o que separa este desvio de uma violação silenciosa.
 - **Descartado:** Bearer token. Cumpre a RFC à risca, mas expõe o token ao JavaScript (a OWASP desaconselha
   por causa de XSS).
 
@@ -196,8 +196,8 @@ Base: [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html). Pesquisa completa
 - Duplicidade (CNPJ + nota) → **409** `DUPLICATE_INVOICE`.
 - Transição inválida (ex.: `PAID → APPROVED`) e perdedor de corrida concorrente → **409** `INVALID_TRANSITION`.
 - O corpo informa o status atual (ex.: `"detail": "A solicitação está PAID; não pode ir para APPROVED."`).
-- **Por quê:** a §15.5.10 define o 409 como "conflict with the current state of the target resource". Os três
-  casos são isso: o estado atual (a nota já existe; o status já é outro) impede o pedido. A mesma seção diz que o
+- **Por quê:** a §15.5.10 define o 409 como "conflict with the current state of the target resource". Nos três
+  casos, o estado atual (a nota já existe; o status já é outro) impede o pedido. A mesma seção diz que o
   servidor "SHOULD generate content that includes enough information for a user to recognize the source of the
   conflict", daí o status atual no `detail`. O enunciado também pede 409 para "duplicidade ou conflito de estado".
 - Pro perdedor da corrida, a semântica é idêntica à de uma transição inválida (o estado mudou antes dele), então
@@ -214,9 +214,9 @@ Base: [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html). Pesquisa completa
 | `GET` (lista, detalhe, dashboard, `/auth/me`) | **200** | a representação |
 
 - **Por quê:** a §15.3.2 define o 201 como "resulted in one or more new resources being created", com o recurso
-  identificado pelo `Location`. Isso é exatamente a criação. A decisão e o pagamento não criam o recurso
-  principal: mudam o estado de um que já existe (o evento de auditoria é efeito colateral). Então 200, e o corpo
-  atualizado evita um `GET` extra. O logout não tem o que devolver, então 204.
+  identificado pelo `Location`, que é o caso da criação. A decisão e o pagamento não criam o recurso
+  principal: mudam o estado de um que já existe (o evento de auditoria é efeito colateral). Por isso 200, com o
+  corpo atualizado para evitar um `GET` extra. O logout não tem o que devolver, então 204.
 
 ### 5.7 Cache: `Cache-Control: no-store` em toda resposta da API
 - **Por quê:** pela RFC 9111, `no-store` significa "a cache MUST NOT store any part of either the immediate
@@ -226,9 +226,9 @@ Base: [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html). Pesquisa completa
 
 ### 5.8 ID que não é UUID: 404
 - `GET /requests/abc` → **404** `NOT_FOUND`, igual a um UUID inexistente.
-- **Por quê:** a URI é sintaticamente válida. Ela só não identifica recurso nenhum, e a §15.5.5 descreve isso:
+- **Por quê:** a URI é sintaticamente válida, mas não identifica recurso nenhum, caso que a §15.5.5 descreve:
   "did not find a current representation for the target resource". Os exemplos do 400 (§15.5.1) são de sintaxe da
-  mensagem, não de identificador desconhecido. (Muitas APIs respondem 400 `"invalid id format"`. A escolha aqui é consciente.)
+  mensagem, não de identificador desconhecido. (Muitas APIs respondem 400 `"invalid id format"`; aqui o 404 é escolha deliberada.)
 
 ### Tabela consolidada
 | Situação | Status | `code` |
@@ -250,12 +250,12 @@ Fontes: [Postgres, Date/Time Types](https://www.postgresql.org/docs/current/data
 
 ### 6.0 Princípios (vindos da pesquisa)
 - **`TEXT` + `CHECK`, nunca `char(n)`/`varchar(n)`.** A wiki diz "Don't use the type char(n). You probably want
-  text" (preenche com espaços e compara de forma estranha). **Correção:** o CNPJ vira `TEXT` + `CHECK`,
-  e não `CHAR(14)` (a regex final, com o CNPJ alfanumérico, está na decisão 11).
+  text" (preenche com espaços e compara de forma estranha). Por isso o CNPJ vira `TEXT` + `CHECK`
+  em vez de `CHAR(14)` (a regex final, com o CNPJ alfanumérico, está na decisão 11).
 - **Dia é `DATE`, instante é `TIMESTAMPTZ`.** O `timestamptz` é guardado em UTC e representa um instante; o
   `date` é um dia do calendário, sem fuso. Vencimento = dia. Criação, atualização e pagamento = instante.
 - **O "hoje" nunca vem do banco.** `CURRENT_DATE` e `now()::date` dependem do fuso da sessão. A aplicação calcula
-  a data de referência (`APP_TODAY` ou a data atual em `America/Sao_Paulo`) e **passa como parâmetro**.
+  a data de referência (`APP_TODAY` ou a data atual em `America/Sao_Paulo`) e a passa como parâmetro.
 - **Intervalo semiaberto, nunca `BETWEEN`, com timestamp** (a wiki é explícita). "Pago no mês" =
   `paid_at >= $inicio_mes_sp AND paid_at < $inicio_mes_seguinte_sp`. Os limites são instantes calculados no fuso de
   SP, e a coluna fica sem função em volta, então o índice é usável.
@@ -269,41 +269,41 @@ Fontes: [Postgres, Date/Time Types](https://www.postgresql.org/docs/current/data
   primeiro dia. O tipo impede um mês 13, ordena e permite aritmética de mês.
 
 ### 6.2 Pagamento: `paid_at TIMESTAMPTZ`, formulário com data e hora
-- A API recebe `paid_at` em RFC 3339 **com offset obrigatório** (ex.: `2026-09-18T10:30:00-03:00`). O formulário
+- A API recebe `paid_at` em RFC 3339 com offset obrigatório (ex.: `2026-09-18T10:30:00-03:00`). O formulário
   pede data e hora, interpretadas em `America/Sao_Paulo`, pré-preenchidas com "agora".
 - **Dois conceitos, sem coluna nova** (separar "quando foi registrado" de "quando foi pago"):
-  - `audit_events.created_at` = **quando o financeiro registrou** (instante do sistema).
-  - `requests.paid_at` = **quando foi pago** (fato de negócio, informado pela pessoa). O enunciado diz: "A data de
+  - `audit_events.created_at` = quando o financeiro registrou (instante do sistema).
+  - `requests.paid_at` = quando foi pago (fato de negócio, informado pela pessoa). O enunciado diz: "A data de
     pagamento é um dado próprio e não deve ser substituída pela data de criação."
-  - No seed os dois coincidem (registrado na hora). No uso real podem divergir, e é por isso que existem os dois.
+  - No seed os dois coincidem (registrado na hora). No uso real podem divergir, por isso existem os dois.
 - **Por quê:** é fiel ao seed (que traz um instante) e o servidor não inventa horário nenhum.
 
 ### 6.3 Travas da data de pagamento
 O `mark-paid` rejeita com **422** `VALIDATION_FAILED` (`errors: [{ field: "paid_at", … }]`) quando:
-1. **Data futura:** `paid_at > agora`, pelo **relógio real** (injetável no service, pros testes). **Revisada**, veja
+1. **Data futura:** `paid_at > agora`, pelo relógio real (injetável no service, pros testes). Trava revisada, veja
    abaixo.
-2. **Antes da aprovação:** `paid_at <` o instante do evento `APPROVED` da auditoria, lido **na mesma transação**
+2. **Antes da aprovação:** `paid_at <` o instante do evento `APPROVED` da auditoria, lido na mesma transação
    do pagamento.
-   A comparação é feita **no minuto**, a precisão que o formulário oferece (data + hora HH:mm). Achado no teste no
-   navegador: aprovar às 14:51:37 e pagar "agora" (14:51 = 14:51:00) era recusado. Pagar no minuto anterior ao da
-   aprovação continua recusado.
+   A comparação é feita no minuto, a precisão que o formulário oferece (data + hora HH:mm). Achado no teste no
+   navegador: aprovar às 14:51:37 e pagar "agora" (14:51 = 14:51:00) era recusado. Pagar no minuto anterior
+   ao da aprovação continua recusado.
 - **Revisão (implementação):** a primeira versão limitava o "futuro" ao fim do dia de referência (`APP_TODAY`).
   Na avaliação isso quebrava o fluxo principal: com `APP_TODAY=2026-09-18` e o relógio real depois dessa data, a
-  aprovação grava um instante real (ex.: 25/09). O pagamento precisaria ser ≤ 18/09 **e** ≥ 25/09, o que é impossível.
+  aprovação grava um instante real (ex.: 25/09), e o pagamento precisaria ser ≤ 18/09 e ≥ 25/09, o que é impossível.
   **Correção conceitual:** o enunciado usa o `APP_TODAY` como *data de referência para regras de calendário* (vencido,
-  pago no mês), pra tornar a avaliação reproduzível. Ele não manda falsificar o relógio dos eventos. "Futuro", para
-  o instante de um pagamento, é um fato do relógio real. As regras de calendário continuam pelo `APP_TODAY`.
-  No formulário, a data e a hora vêm pré-preenchidas com o "agora" real em SP, com o limite no hoje real. É só dica
-  de UX: quem garante é o servidor.
+  pago no mês), pra tornar a avaliação reproduzível, e não manda falsificar o relógio dos eventos. "Futuro", para
+  o instante de um pagamento, é um fato do relógio real; as regras de calendário continuam pelo `APP_TODAY`.
+  No formulário, a data e a hora vêm pré-preenchidas com o "agora" real em SP, com o limite no hoje real. Isso é só
+  dica de UX, porque quem garante a regra é o servidor.
 - **Por quê:** o número "pago no mês" do dashboard depende dessa data. Uma data futura é impossível, e pagar antes
   de aprovar contradiz o fluxo que o portal impõe (`APPROVED → PAID`). O seed respeita as duas travas (todo
-  pagamento é posterior à aprovação). O seed é inserido direto no banco, fora do service, então não passa por
+  pagamento é posterior à aprovação), embora seja inserido direto no banco, fora do service, sem passar por
   essas validações.
 
 ### 6.4 `updated_at` mantido pela query, explícito
 - `UPDATE … SET status = $2, updated_at = now() …` na própria query (`.sql` do PgTyped). Sem trigger.
 - **Por quê:** fica visível onde a mudança acontece. `now()` é o início da transação, então o `updated_at` da
-  solicitação e o `created_at` do evento de auditoria da mesma transação são **idênticos**, o que é coerente.
+  solicitação e o `created_at` do evento de auditoria da mesma transação são idênticos.
 
 ## 7. Categoria, nota fiscal, busca e tamanhos — FECHADA
 
@@ -319,7 +319,7 @@ Valores exatamente como no seed: `INFRAESTRUTURA`, `MARKETING`, `SERVIÇOS`, `SO
 
 **No front:**
 - O tipo gerado do OpenAPI já chega como a união `'INFRAESTRUTURA' | 'MARKETING' | 'SERVIÇOS' | 'SOFTWARE'`, e o
-  select do formulário é montado a partir dele. **O front não mantém uma lista própria.** Se o back mudar a lista,
+  select do formulário é montado a partir dele. O front não mantém uma lista própria: se o back mudar a lista,
   o front deixa de compilar onde usa um valor que não existe mais.
 - O texto exibido pode ser amigável ("Serviços"), mas o valor enviado é sempre o do enum.
 
@@ -327,10 +327,10 @@ Valores exatamente como no seed: `INFRAESTRUTURA`, `MARKETING`, `SERVIÇOS`, `SO
 1. O seed tem exatamente 4 categorias, e o escopo não tem tela de cadastro de categoria.
 2. **Uma tabela `categories` + FK seria generalização prematura:** flexibilidade (cadastrar sem migration) que
    ninguém no escopo usa, paga com mais uma tabela, mais um join, mais seed e mais testes. *"Premature optimization
-   is the root of all evil"* (Knuth, 1974). A generalização prematura é prima dela.
+   is the root of all evil"* (Knuth, 1974), e a generalização prematura é parente próxima dela.
 3. **Texto livre destruiria o dado:** "Software", "software " e "SW" virariam três categorias.
 4. **Custo de mudar depois:** adicionar uma categoria = uma migration que altera o `CHECK` + um valor na constante.
-   Se o negócio passar a precisar cadastrar pela interface, aí sim vira tabela, com um motivo real.
+   Se o negócio passar a precisar cadastrar pela interface, aí sim vira tabela, com motivo real.
 
 > A frase completa do Knuth também sustenta o resto das decisões: *"We should forget about small efficiencies,
 > say about 97% of the time: premature optimization is the root of all evil. Yet we should not pass up our
@@ -343,10 +343,10 @@ Valores exatamente como no seed: `INFRAESTRUTURA`, `MARKETING`, `SERVIÇOS`, `SO
 - **Por quê:** o `UNIQUE (supplier_cnpj, invoice_number)` só protege contra duplicata se os dois lados estiverem
   na mesma forma canônica. Sem isso, `nf-2026-1001 ` escapa de `NF-2026-1001`. O `CHECK` garante a forma canônica
   mesmo se algum caminho esquecer de normalizar. O seed já está nessa forma, então nada é alterado.
-- **Não** removemos hífen nem espaço interno. Isso poderia fundir números diferentes e mudaria como a pessoa lê
+- Hífen e espaço interno não são removidos: isso poderia fundir números diferentes e mudaria como a pessoa lê
   a própria nota.
 - Contexto: na NF-e real, a identidade é CNPJ + modelo + série + número (na chave de acesso). O desafio simplifica
-  pra CNPJ + número em texto livre, e é isso que modelamos.
+  pra CNPJ + número em texto livre, como modelamos.
 
 ### 7.3 Busca por fornecedor: `ILIKE` + `unaccent`, curingas escapados
 - `unaccent(supplier_name) ILIKE unaccent('%' || $termo_escapado || '%')`. A extensão `unaccent` (contrib do
@@ -366,8 +366,8 @@ Valores exatamente como no seed: `INFRAESTRUTURA`, `MARKETING`, `SERVIÇOS`, `SO
 | `payment_reference` | 100 |
 - Colunas `TEXT` + `CHECK (char_length(x) BETWEEN 1 AND N)` (coerente com o "não use varchar(n)" da 6.0). Os mesmos
   limites vão no Zod.
-- **Por quê:** o Zod dá a mensagem boa por campo (422 com `errors[]`), e o `CHECK` é a garantia final. Duas camadas
-  com um papel diferente cada, não duplicação sem motivo.
+- **Por quê:** o Zod dá a mensagem boa por campo (422 com `errors[]`), e o `CHECK` é a garantia final. São duas
+  camadas, cada uma com um papel diferente.
 
 ## 8. Autenticação e sessão — FECHADA
 
@@ -379,23 +379,23 @@ Fontes: OWASP [Session Management](https://cheatsheetseries.owasp.org/cheatsheet
 
 ### 8.1 Sessão opaca no Postgres (não JWT)
 - No login: gera 32 bytes aleatórios (`crypto.randomBytes`, 256 bits; a OWASP pede ≥ 64) → envia no cookie em
-  base64url → grava **só o SHA-256** na tabela `sessions (id_hash PK, user_id, created_at, last_seen_at, expires_at)`.
-- A cada request: `SHA-256(cookie)` → busca por PK → confere os timeouts → carrega o usuário e o **papel atual do banco**.
+  base64url → grava só o SHA-256 na tabela `sessions (id_hash PK, user_id, created_at, last_seen_at, expires_at)`.
+- A cada request: `SHA-256(cookie)` → busca por PK → confere os timeouts → carrega o usuário e o papel atual do banco.
 - Logout: `DELETE` da linha + cookie expirado. Sessão expirada encontrada numa busca é apagada ali mesmo (sem cron).
-- **Nova sessão a cada login**, o que evita session fixation (OWASP: "must be regenerated after authentication").
+- Cada login cria uma sessão nova, o que evita session fixation (OWASP: "must be regenerated after authentication").
 - **Por quê:**
   1. A OWASP exige invalidar no servidor: "must take active actions to invalidate the session on both sides, client
      and server". Um JWT stateless não consegue: no logout ele só apaga o cookie, e uma cópia do token continua
      válida até o `exp`.
   2. O papel vem do banco a cada request. Um JWT congelaria o papel até expirar.
-  3. Guardar o **hash** (e não o ID) significa que um vazamento do banco não permite sequestrar sessões. Mesmo
-     princípio do hash de senha.
-  4. Custo: uma tabela e um lookup por chave primária por request. Desprezível.
-- **`JWT_SECRET` do `.env.example` fica sem uso.** Documentado no README: o enunciado aceita "sessão segura ou
+  3. Como o banco guarda o hash, e não o ID, um vazamento do banco não permite sequestrar sessões (mesmo
+     princípio do hash de senha).
+  4. O custo é desprezível: uma tabela e um lookup por chave primária por request.
+- O `JWT_SECRET` do `.env.example` fica sem uso, e o README registra isso: o enunciado aceita "sessão segura ou
   token", e a sessão opaca foi escolhida pelos motivos acima.
 
 ### 8.2 Expiração: 30 min ociosa + 8 h absoluta
-- Ociosa: expira 30 min após o último uso. O `last_seen_at` é atualizado **no máximo 1× por minuto**, pra não
+- Ociosa: expira 30 min após o último uso. O `last_seen_at` é atualizado no máximo 1× por minuto, pra não
   escrever no banco a cada request.
 - Absoluta: `expires_at = login + 8 h`, sem renovação.
 - **Por quê:** são os limites superiores da faixa da OWASP para aplicação de baixo risco (15–30 min ociosa, 4–8 h
@@ -404,18 +404,18 @@ Fontes: OWASP [Session Management](https://cheatsheetseries.owasp.org/cheatsheet
 ### 8.3 CSRF: `SameSite=Strict` + header customizado
 - Toda requisição que muda estado (POST) exige `X-Requested-With: gex-web`. Sem ele → **403** `FORBIDDEN`.
 - **Por quê:** a OWASP diz que o SameSite "should be treated as a defense-in-depth layer". Pra API AJAX, ela
-  indica header customizado: um site atacante não consegue enviá-lo sem preflight CORS, e **não habilitamos
-  CORS** (front e API na mesma origem via nginx). A OWASP também diz que depender só de `Content-Type:
+  indica header customizado: um site atacante não consegue enviá-lo sem preflight CORS, e não habilitamos
+  CORS (front e API na mesma origem via nginx). A OWASP também diz que depender só de `Content-Type:
   application/json` não basta. Token CSRF (double-submit) daria mais peças pro mesmo ganho neste cenário
   same-origin.
 - Vale também pro próprio `POST /auth/login` (protege contra login CSRF).
 
 ### 8.4 Cookie: `sid`; `HttpOnly; SameSite=Strict; Path=/`; `Secure` por env; sem `__Host-`
 - `Secure` vem de `COOKIE_SECURE` (`false` no compose local em http, `true` em produção com HTTPS).
-- **Sem o prefixo `__Host-`**: o Chrome rejeita cookies com esse prefixo em `http://localhost` (o Firefox aceita).
+- Sem o prefixo `__Host-`: o Chrome rejeita cookies com esse prefixo em `http://localhost` (o Firefox aceita).
   Com o prefixo, o login do avaliador quebraria no Chrome.
 - Nome genérico `sid` (a OWASP recomenda não revelar tecnologia pelo nome do cookie).
-- **Trade-off documentado no README:** em produção, o certo é HTTPS + `Secure` + `__Host-sid`.
+- Trade-off documentado no README: em produção, o certo é HTTPS + `Secure` + `__Host-sid`.
 
 ### 8.5 Senha
 - argon2id (`@node-rs/argon2`) com o mínimo da OWASP: m = 19 MiB, t = 2, p = 1.
@@ -432,20 +432,20 @@ Fontes: OWASP [Session Management](https://cheatsheetseries.owasp.org/cheatsheet
 
 ### 9.2 Seed idempotente (`ON CONFLICT DO NOTHING`, numa transação)
 - **Por quê:** rodar de novo não duplica nada nem sobrescreve o que o avaliador fez no app. A transação garante tudo
-  ou nada. Os números do dashboard batem com o `expected_results.json` **só no estado original**, e o README diz
+  ou nada. Os números do dashboard batem com o `expected_results.json` só no estado original, e o README diz
   como voltar a ele: `docker compose down -v && docker compose up --build`. Resetar a cada boot apagaria o trabalho
   do avaliador num simples restart.
 
 ### 9.3 Banco de teste: database separado, criado por uma linha de SQL
 - `docker/postgres/init/01-test-db.sql` com `CREATE DATABASE gex_finance_it;`. A imagem oficial do Postgres roda
-  sozinha o que está em `/docker-entrypoint-initdb.d/` na primeira subida. **Zero código de setup.**
+  sozinha o que está em `/docker-entrypoint-initdb.d/` na primeira subida, sem nenhum código de setup.
 - O serviço de teste roda `dbmate up` no `gex_finance_it` e depois o `vitest`.
 - Antes de cada teste de integração: `TRUNCATE … CASCADE` (um helper de uma linha). Os arquivos de integração
   rodam em série.
-- **Sem `DATABASE_URL`, o teste FALHA, não pula.**
+- Sem `DATABASE_URL`, o teste falha em vez de ser pulado.
 - **Por quê:**
   1. **O mesmo database quebra de forma concreta:** o teste do dashboard espera exatamente R$ 8.750,49. Uma
-     solicitação criada por outro teste muda o número, e o teste falha aleatoriamente conforme a ordem. E o
+     solicitação criada por outro teste muda o número, e o teste falha aleatoriamente conforme a ordem. Além disso, o
      `TRUNCATE` apagaria os dados que o avaliador está usando.
   2. **Rollback por teste não serve:** o teste de concorrência precisa de commits reais em conexões separadas
      (é o `UNIQUE` e o `WHERE status` de verdade que estão sendo provados).
@@ -474,23 +474,23 @@ Fontes: OWASP [Session Management](https://cheatsheetseries.owasp.org/cheatsheet
 
 ### 9.5 Política de testes: cobertura por comportamento, não por porcentagem
 
-**Não perseguimos 100% de cobertura, nem uma meta numérica.** A cobertura (Vitest + v8) é **medida e reportada**
-como diagnóstico, para achar código que ficou sem teste, mas **não bloqueia o build**.
+Não há meta de cobertura, nem 100% nem outra. A cobertura (Vitest + v8) é medida e reportada como
+diagnóstico, para achar código que ficou sem teste, e não bloqueia o build.
 
 **Por quê:**
 1. **Kent Beck** (criador do TDD): *"I get paid for code that works, not for tests, so my philosophy is to test as
-   little as possible to reach a given level of confidence."* A régua é confiança, não quantidade.
+   little as possible to reach a given level of confidence."* A régua é a confiança.
 2. **Martin Fowler** ([TestCoverage](https://martinfowler.com/bliki/TestCoverage.html)): *"If you make a certain
    level of coverage a target, people will try to attain it. The trouble is that high coverage numbers are too easy
    to reach with low quality testing."* E ainda: *"I would be suspicious of anything like 100% - it would smell of
    someone writing tests to make the coverage numbers happy, but not thinking about what they are doing."*
 3. **Donald Knuth**, na frase completa: *"premature optimization is the root of all evil. Yet we should not pass up
-   our opportunities in that critical 3%."* O esforço de teste vai **concentrado nos 3% críticos** (dinheiro,
+   our opportunities in that critical 3%."* O esforço de teste se concentra nos 3% críticos (dinheiro,
    duplicidade, transição, concorrência, datas), não espalhado igualmente por getters, mapeamentos triviais e
    código gerado.
-4. **Contexto honesto:** é um teste de capacidade com prazo curto. Optamos conscientemente pela simplicidade (um
-   pouco a contragosto, porque a preferência seria testar mais). Isso é uma decisão de escopo, não de qualidade:
-   tudo o que o enunciado exige é testado, e cada teste extra foi escolhido por proteger uma regra que, se quebrar,
+4. **Contexto:** é um teste de capacidade com prazo curto, e optamos pela simplicidade (um pouco a contragosto,
+   porque a preferência seria testar mais). O corte é de escopo e não reduz a qualidade: tudo o que o enunciado
+   exige é testado, e cada teste extra foi escolhido por proteger uma regra que, se quebrar,
    vira dado errado.
 
 **O que é testado (e em que nível):**
@@ -507,13 +507,13 @@ como diagnóstico, para achar código que ficou sem teste, mas **não bloqueia o
 | 8 | Dashboard (FINANCE + os 2 solicitantes) **contra o `expected_results.json` oficial** como oráculo | integração | ✅ |
 | 9 | Fluxo completo criar → aprovar → pagar com trilha de auditoria | integração (HTTP + Postgres real) | ✅ |
 | 10 | Componentes: input de valor, formulário (anti-duplo-envio, mensagem de 409), ações por perfil/estado | front (Testing Library + MSW) | ✅ (≥ 1) |
-| 11 | CNPJ: DV válido/inválido, com/sem máscara, sequências repetidas | unit | — risco |
-| 12 | Bordas de data: vence **hoje** não está vencido; pagamento em 31/08 fora de "pago no mês"; `DATE` volta sem deslocar | unit + integração | — risco |
-| 13 | Solicitação alheia → 404; login com usuário inexistente = mesma resposta que senha errada | HTTP | — segurança |
-| 14 | Sem header anti-CSRF → 403; `paid_at` futuro / antes da aprovação → 422 | HTTP | — segurança/regra |
-| 15 | Auditoria append-only: `UPDATE`/`DELETE` em `audit_events` falha | integração | — integridade |
+| 11 | CNPJ: DV válido/inválido, com/sem máscara, sequências repetidas | unit | Não (risco) |
+| 12 | Bordas de data: vence **hoje** não está vencido; pagamento em 31/08 fora de "pago no mês"; `DATE` volta sem deslocar | unit + integração | Não (risco) |
+| 13 | Solicitação alheia → 404; login com usuário inexistente = mesma resposta que senha errada | HTTP | Não (segurança) |
+| 14 | Sem header anti-CSRF → 403; `paid_at` futuro / antes da aprovação → 422 | HTTP | Não (segurança/regra) |
+| 15 | Auditoria append-only: `UPDATE`/`DELETE` em `audit_events` falha | integração | Não (integridade) |
 
-**O que conscientemente NÃO é testado:** o código gerado pelo PgTyped e pelo `openapi-typescript` (é da ferramenta),
+**O que fica fora dos testes, de propósito:** o código gerado pelo PgTyped e pelo `openapi-typescript` (é da ferramenta),
 os `mapX`/`toXResponse` triviais (cobertos indiretamente pelos testes de integração e HTTP), a fiação do Fastify, o
 Swagger e o estilo visual.
 
@@ -537,7 +537,7 @@ Fonte primária: Receita Federal, IN RFB nº 2.229/2024 e o documento
 **Regra oficial:**
 - Formato `AA.AAA.AAA/AAAA-DV`: as 12 primeiras posições aceitam `0–9` e `A–Z` (maiúsculas), e os 2 DVs são
   numéricos.
-- Novos CNPJs são alfanuméricos **desde julho de 2026**. Os numéricos existentes continuam válidos, e os dois
+- Novos CNPJs são alfanuméricos desde julho de 2026. Os numéricos existentes continuam válidos, e os dois
   formatos coexistem.
 - DV = módulo 11 sobre `código ASCII − 48` de cada caractere (`0`→0 … `9`→9, `A`→17, `B`→18 …), com os mesmos
   pesos de sempre (`5,4,3,2,9,8,7,6,5,4,3,2`, e depois `6,5,4,3,2,9,8,7,6,5,4,3,2`).
@@ -552,10 +552,10 @@ Fonte primária: Receita Federal, IN RFB nº 2.229/2024 e o documento
 - Front: a máscara `AA.AAA.AAA/AAAA-00` aceita letras e converte para maiúscula enquanto digita.
 
 **Por quê:**
-1. Um portal financeiro que só aceita dígitos **recusaria um fornecedor novo e legítimo** a partir de julho de 2026.
-   Seria um bug de produção. A Receita é explícita: "Todos os sistemas públicos e privados deverão ser ajustados".
-2. **Não é um segundo algoritmo, é um superconjunto:** para dígitos, `ASCII − 48` é o próprio dígito. CNPJs
-   numéricos se comportam **exatamente** como o enunciado pede, e o custo é zero de complexidade extra.
+1. Um portal financeiro que só aceita dígitos recusaria um fornecedor novo e legítimo a partir de julho de 2026,
+   um bug de produção. A Receita é explícita: "Todos os sistemas públicos e privados deverão ser ajustados".
+2. **O algoritmo novo é um superconjunto do antigo:** para dígitos, `ASCII − 48` é o próprio dígito. CNPJs
+   numéricos se comportam exatamente como o enunciado pede, sem complexidade extra.
 3. **Desvio consciente do texto "armazene apenas os 14 dígitos"**, documentado no README com a fonte. Continuamos
    armazenando as 14 posições sem máscara, que é a intenção da regra. O enunciado foi escrito no vocabulário
    anterior à mudança.
@@ -578,8 +578,8 @@ RETURNING *;
   código gerado é **commitado**, então o avaliador não precisa gerar nada.
 
 **Por quê:**
-1. **O sqlc-gen-typescript não é seguro pra apostar:** o README diz *"Here be dragons! This plugin is still in early
-   access"*, o último release é v0.1.3 (jan/2024) e o último commit é de nov/2024. Quase 2 anos parado.
+1. **O sqlc-gen-typescript é uma aposta arriscada:** o README diz *"Here be dragons! This plugin is still in early
+   access"*, o último release é v0.1.3 (jan/2024) e o último commit é de nov/2024, quase 2 anos parado.
 2. **O PgTyped é o padrão de mercado da abordagem SQL-first com codegen em TypeScript:** v2.4.3 (mar/2025), commits
    ativos até set/2026, ~3,3k estrelas, a mais adotada dessa categoria.
 3. **É fiel ao estilo SQL-first do sqlc:** SQL em arquivo `.sql`, query com nome, código gerado e nunca editado à mão, sem ORM
@@ -593,7 +593,7 @@ RETURNING *;
 - **Precisa do banco de pé pra gerar.** Mitigação: um script só (`gen:sql`), e o código gerado fica commitado.
 - **Diferença de sintaxe em relação ao sqlc:** `/* @name X */` + `:param` no lugar de `-- name: X :one` + `$1`.
 
-**Verificação — APROVADA.** Feita num banco descartável, com as 4 queries representativas, em tempo de execução:
+**Verificação: aprovada.** Feita num banco descartável, com as 4 queries representativas, em tempo de execução:
 | Critério | Resultado |
 | --- | --- |
 | Filtro opcional com parâmetro nulo (`:status::text IS NULL OR status = :status`) | Tipado como `string \| null \| void`; `null` = sem filtro |
@@ -630,8 +630,8 @@ Fontes: [PgTyped](https://pgtyped.dev/), [adelsz/pgtyped](https://github.com/ade
 | **24** | **Active LTS** (última: v24.21.0, 07/09/2026) | 2025-10-28 | 2026-10-20 | 2028-04-30 |
 | 26 | **Current** | previsto 2026-10-28 | 2027-10-20 | 2029-04-30 |
 
-**Por quê:** o Node 26 não é ruim, mas ainda é *Current*: pode receber mudanças até entrar em LTS
-em 28/10/2026. Numa entrega avaliável, **previsibilidade** vale mais que novidade. O avaliador roda o mesmo runtime
+**Por quê:** o Node 26 ainda é *Current* e pode receber mudanças até entrar em LTS em 28/10/2026. Numa entrega
+avaliável, previsibilidade vale mais que novidade. O avaliador roda o mesmo runtime
 estável que nós, e o pin da versão exata garante que `docker compose up --build` daqui a uma semana produz a mesma
 imagem.
 
@@ -640,20 +640,20 @@ imagem.
 
 ## 14. Dinheiro, tempo, front, ferramental, logs e rate limit — FECHADA
 
-Revisada contra os dados do desafio. Uma primeira versão propunha "máscara estilo banco" como o próprio parser. Isso quebrava o oráculo oficial
-(`"10"` → 1000), foi corrigido e a revisão concordou.
+Revisada contra os dados do desafio. A primeira versão usava a "máscara estilo banco" como o próprio parser, o que
+quebrava o oráculo oficial (`"10"` → 1000). A correção foi aceita na revisão.
 
 ### 14.1 Dinheiro: parser separado da máscara
-- **O back não tem parser de BRL.** Recebe `amount_cents` e valida inteiro, `> 0`, `≤ Number.MAX_SAFE_INTEGER`.
+- O back não tem parser de BRL. Recebe `amount_cents` e valida inteiro, `> 0`, `≤ Number.MAX_SAFE_INTEGER`.
   Front = representação humana. Back = representação canônica.
-- **`parseBRLToCents(texto)`**: função pura do **front**, com uma gramática **exclusivamente brasileira**:
+- **`parseBRLToCents(texto)`**: função pura do **front**, com uma gramática exclusivamente brasileira:
   - `R$` opcional, espaços opcionais;
-  - parte inteira com dígitos simples (`1553`) **ou** milhar agrupado por `.` em grupos de 3 (`1.553`);
+  - parte inteira com dígitos simples (`1553`) ou milhar agrupado por `.` em grupos de 3 (`1.553`);
   - parte decimal opcional com `,` + 1 ou 2 dígitos.
 
 | Entrada | Resultado |
 | --- | --- |
-| `1.553,13` / `0,01` / `10` / `R$ 2.000,00` | 155313 / 1 / 1000 / 200000 (os exemplos **oficiais** do `expected_results.json`) |
+| `1.553,13` / `0,01` / `10` / `R$ 2.000,00` | 155313 / 1 / 1000 / 200000 (os exemplos oficiais do `expected_results.json`) |
 | `1,5` / `1,55` / `1.553` | 150 / 155 / 155300 |
 | `1553.13`, `1,553.13`, `1,555`, `1.55`, `abc`, `0`, `-1` | ❌ rejeita (os dois últimos: valor deve ser > 0) |
 
@@ -665,13 +665,13 @@ Revisada contra os dados do desafio. Uma primeira versão propunha "máscara est
   - colar (`"10"`, `"R$ 2.000,00"`) → `parseBRLToCents` → 1000 / 200000
 - **Por quê:** o contrato fica previsível (um formato só, um parser só, testado contra o oráculo oficial). A máscara
   elimina a ambiguidade na digitação sem mudar o significado do texto colado.
-- A **biblioteca** da máscara (react-imask, outra ou um componente próprio) é detalhe de implementação do front. A
-  decisão que importa é o comportamento acima.
+- A biblioteca da máscara (react-imask, outra ou um componente próprio) é detalhe de implementação do front; o que
+  fica decidido é o comportamento acima.
 
 ### 14.2 Tempo: o servidor é a autoridade
 - **`is_overdue` é calculado no backend** e vem em cada solicitação (lista e detalhe). O front nunca compara datas
   com o relógio do navegador.
-- **`reference_date` é metadado da resposta, não campo repetido em cada objeto:**
+- **`reference_date` vai como metadado da resposta, uma vez, em vez de se repetir em cada objeto:**
   - lista: no envelope, `{ data, page, page_size, total, total_pages, reference_date }`;
   - dashboard: `{ …indicadores, reference_date }`, e os números se autodescrevem ("pago em set/2026");
   - `GET /auth/me`: `{ user, reference_date }`, o contexto da sessão, carregado na abertura. O formulário de
@@ -685,7 +685,7 @@ biblioteca de máscara como detalhe de implementação: o `MaskInput` do própri
 
 ### 14.4 Ferramental: fechado
 npm (já instalado, sem motivo pra trocar) · Prettier (o `gofmt` do TS) · ESLint + `typescript-eslint` com
-`no-floating-promises` e `no-empty` · Vitest. **Sem virar projeto paralelo:** config padrão + essas regras.
+`no-floating-promises` e `no-empty` · Vitest. Config padrão + essas regras, sem virar projeto paralelo.
 
 ### 14.5 Logs: política explícita + sanitização central de erro
 - **O que o log de requisição carrega:** `request_id`, `user_id`, `method`, `route` (o padrão, ex.:
@@ -699,18 +699,18 @@ npm (já instalado, sem motivo pra trocar) · Prettier (o `gofmt` do TS) · ESLi
   a regra fica testável: um teste provoca um `23505` e verifica que o log não contém o CNPJ.
 
 ### 14.6 Rate limit no login: obrigação de segurança
-- `@fastify/rate-limit` **≥ 11.2.0** (as versões anteriores têm bypass por rotação de IPv6,
+- `@fastify/rate-limit` ≥ 11.2.0 (as versões anteriores têm bypass por rotação de IPv6,
   [GHSA-grpc-p53c-r64v](https://github.com/fastify/fastify-rate-limit/security/advisories/GHSA-grpc-p53c-r64v)).
   Hoje a última é a 11.2.0 (29/07/2026).
 - **Dois baldes no `POST /auth/login`:** por **IP** (ataque a muitas contas a partir de um lugar) e por **email
-  normalizado** (credential stuffing distribuído contra uma conta). O balde por email vale **também pra email que não
-  existe**, senão a existência do balde revelaria contas. Estoura → **429** + `Retry-After`.
+  normalizado** (credential stuffing distribuído contra uma conta). O balde por email vale também pra email que não
+  existe, senão a existência do balde revelaria contas. Estoura → **429** + `Retry-After`.
 - **Atrás do nginx:** sem `trustProxy`, todo mundo teria o IP do nginx e o balde por IP viraria global (um atacante
-  travaria o login de todos). Com `trustProxy` **no IP exato do nginx** (IP fixo do container `web` no compose), e
-  **não** `true` nem contagem de saltos: a doc do Fastify avisa que "hop-count-only checks … are unsafe when the
+  travaria o login de todos). Por isso o `trustProxy` aponta pro IP exato do nginx (IP fixo do container `web` no
+  compose), e não é `true` nem contagem de saltos: a doc do Fastify avisa que "hop-count-only checks … are unsafe when the
   Fastify origin can be reached directly", e a API fica publicada na 3001 pro Swagger. Uma requisição direta na 3001
   não vem do IP do nginx, então o `X-Forwarded-For` dela é ignorado (anti-spoofing).
-- O nginx **sobrescreve** o `X-Forwarded-For` com `$remote_addr`, sem anexar o que o cliente mandou.
+- O nginx sobrescreve o `X-Forwarded-For` com `$remote_addr`, sem anexar o que o cliente mandou.
 - Estado em memória (instância única). Documentado: com várias réplicas, precisaria de Redis.
 - **Por quê:** a OWASP recomenda proteção contra ataques automatizados com limite mais restritivo no login, combinando
   limite por conta e por origem ([Authentication](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html),
@@ -726,8 +726,8 @@ Retry-After: 42
 { "type": "about:blank", "title": "Too Many Requests", "status": 429,
   "code": "TOO_MANY_REQUESTS", "detail": "Muitas tentativas de login. Tente novamente em instantes." }
 ```
-- O `Retry-After` é **MAY** na [RFC 6585](https://www.rfc-editor.org/rfc/rfc6585.html) (boa prática, não
-  obrigação). Colocamos porque ajuda o cliente, e o plugin já o gera.
+- O `Retry-After` é **MAY** na [RFC 6585](https://www.rfc-editor.org/rfc/rfc6585.html), ou seja, boa prática
+  opcional. Colocamos porque ajuda o cliente, e o plugin já o gera.
 - O `type` continua `about:blank`, como definido na 4a: pela RFC 9457 ele significa "o status já diz tudo", e o
   `code` (extensão) dá a semântica de máquina. Não inventamos um URI de tipo que ninguém consegue resolver, pelo mesmo
   princípio da 5.3.
@@ -738,7 +738,7 @@ Levantadas em 25/09/2026 no registro do npm, com os `peerDependencies` de cada p
 
 | Pacote | Versão | Observação |
 | --- | --- | --- |
-| **TypeScript** | **5.9.3** | **Não** a última (7.0.2). Ver abaixo |
+| **TypeScript** | **5.9.3** | Não é a última (7.0.2); ver abaixo |
 | React / React DOM | 19.3.0 | |
 | Mantine (`core`, `dates`, `notifications`, `hooks`) | **9.6.2** | Exige React ≥ 19.2 |
 | React Router | 8.4.0 | Exige React ≥ 19.2.7 e Node ≥ 22.22 |
@@ -756,7 +756,7 @@ Levantadas em 25/09/2026 no registro do npm, com os `peerDependencies` de cada p
 **Regras:**
 - **Versões exatas** no `package.json` (sem `^` nem `~`) + `package-lock.json` commitado. O avaliador instala
   exatamente o que foi testado.
-- Atualização de dependência é uma decisão, não um efeito colateral de `npm install`.
+- Atualizar uma dependência é decisão explícita e nunca acontece como efeito colateral de `npm install`.
 
 **Por quê: TypeScript 5.9.3 e não 7.0.2**
 1. O TypeScript 7 é o compilador reescrito em Go (tsgo) e **ainda não tem API programática**. As ferramentas que leem
@@ -780,7 +780,7 @@ Levantadas em 25/09/2026 no registro do npm, com os `peerDependencies` de cada p
    As quebras da v9 (variáveis de CSS do variant `light`, `gutter` → `gap` no `Grid`, React ≥ 19.2) não afetam um
    projeto que começa do zero.
 3. Começar um projeto novo na major anterior seria dívida desde o primeiro dia.
-4. **Verificado** nos tipos instalados: o `DateInput` da v9 recebe `string | null`.
+4. Verificado nos tipos instalados: o `DateInput` da v9 recebe `string | null`.
 
 Fontes: registro do npm (`registry.npmjs.org`, `peerDependencies` de cada pacote);
 [typescript-eslint #12518: TypeScript 7.0.2 Support](https://github.com/typescript-eslint/typescript-eslint/issues/12518);
@@ -792,10 +792,10 @@ Fontes: registro do npm (`registry.npmjs.org`, `peerDependencies` de cada pacote
 No lado de entrada, a camada `handler/` é o adaptador que decide *quando e como* o código dispara, e chama o service
 direto. Dentro das camadas entram os padrões do *Patterns of Enterprise Application Architecture* (Fowler).
 
-**O critério de todas as escolhas abaixo é o que o projeto pede, não preferência de estilo.** O enunciado diz:
+O critério de todas as escolhas abaixo é o que o projeto pede, e não preferência de estilo. O enunciado diz:
 *"Valorizamos uma solução pequena, correta e fácil de entender. Decisões simples e bem executadas valem mais que
-funcionalidades extras."* E o escopo é pequeno e conhecido: **1 gatilho** (HTTP), **3 entidades** (usuário,
-solicitação, evento de auditoria), **1 banco**, prazo de 48 h. Cada padrão entra só se resolve um problema que esse
+funcionalidades extras."* E o escopo é pequeno e conhecido: 1 gatilho (HTTP), 3 entidades (usuário,
+solicitação, evento de auditoria), 1 banco, prazo de 48 h. Cada padrão entra só se resolve um problema que esse
 escopo tem.
 
 ### 16.1 Ports and Adapters: onde entra e onde não entra
@@ -810,15 +810,15 @@ escopo tem.
 1. **As regras críticas precisam ser testáveis sem banco:** transições, travas de pagamento (§6.3), normalização (§7.2).
    Com a porta, o teste do service usa um fake escrito à mão, e o teste de integração usa o adaptador real (§9.5). Sem a
    porta, todo teste de regra dependeria do Postgres.
-2. **A regra de negócio não conhece a tecnologia:** o service não importa Postgres, PgTyped nem Fastify. É isso que deixa
-   o service fácil de ler e de explicar, que é um requisito explícito do enunciado.
+2. **A regra de negócio não conhece a tecnologia:** o service não importa Postgres, PgTyped nem Fastify. Isso deixa
+   o service fácil de ler e de explicar, requisito explícito do enunciado.
 3. A interface nasce do consumidor (o service), pequena e com só o que ele usa, e não de quem implementa.
 
 **Por que não há porta no lado de entrada (o projeto não pede):**
 1. **Existe um único gatilho (HTTP).** A porta de entrada se paga quando vários adaptadores (HTTP, fila, cron, CLI) chamam
    o mesmo caso de uso. Aqui não haveria um segundo adaptador pra plugar.
 2. **Não há ganho de teste:** o service é testado direto, e o HTTP com `app.inject()`.
-3. Se o escopo ganhar um segundo gatilho, a porta de entrada nasce junto com ele, por um motivo real. O nome
+3. Se o escopo ganhar um segundo gatilho, a porta de entrada nasce junto com ele, já com motivo real. O nome
    `handler/http/` já deixa espaço pra um `handler/cron/`.
 
 **Por que não entidade de domínio separada do DTO:** com 3 entidades e regras concentradas nos services, dobrar os tipos
@@ -845,16 +845,16 @@ persiste), que é o que se procura ao ler e ao avaliar. As portas vivem junto do
 ### 16.3 O que não usamos, de propósito
 ORM / Active Record (§12) · container de DI · CQRS · Event Sourcing · DDD tático (agregados, value objects por toda
 parte) · hexagonal completo com porta de entrada. Todos resolvem problemas de escala, de domínio complexo ou de
-múltiplos gatilhos. **O escopo deste projeto (1 gatilho, 3 entidades, 1 banco) não tem esses problemas**, e o
+múltiplos gatilhos. O escopo deste projeto (1 gatilho, 3 entidades, 1 banco) não tem esses problemas, e o
 enunciado pede explicitamente uma solução pequena e fácil de entender.
 
 ## 17. Sistema visual do front — FECHADA
 
 **Referência:** [EasyPay: E-Wallet Digital Payment App](https://www.figma.com/community/file/1146678238901785717/easypay-e-wallet-digital-payment-app),
-de Nickelfox, na Figma Community (licença **CC BY 4.0**, com crédito no README). Lido pelas variáveis e telas do arquivo.
+de Nickelfox, na Figma Community (licença CC BY 4.0, com crédito no README). Lido pelas variáveis e telas do arquivo.
 
-**Adaptação, não cópia:** o EasyPay é um app de celular, e o portal é web de desktop, com tabela, filtros e formulários.
-Aplicamos o **sistema visual** (paleta, tipografia, hierarquia, estilo de cards e botões) e mantemos os layouts próprios
+**Adaptação:** o EasyPay é um app de celular, e o portal é web de desktop, com tabela, filtros e formulários.
+Aplicamos o sistema visual (paleta, tipografia, hierarquia, estilo de cards e botões) e mantemos os layouts próprios
 do portal. Toda a identidade mora em `front/src/theme.ts` (tema do Mantine); os componentes só consomem o tema.
 
 | Elemento | No portal |
@@ -865,15 +865,15 @@ do portal. Toda a identidade mora em `front/src/theme.ts` (tema do Mantine); os 
 | Destaque | o "Total pendente" do painel em card escuro (o equivalente do card de saldo) |
 | Status | pastéis do Figma com texto escuro (`autoContrast`): Pendente `#FFF2CF`, Aprovada `#BCE2FE`, Paga `#D6FFDC`, Rejeitada `#FCB3C5` |
 | Alerta | "Vencida" e "Rejeitar" em vermelho escuro `#B42318` (contraste AA com branco): o único alerta forte |
-| Tipografia | IBM Plex Sans (500/600) nos títulos, Roboto (400/500) no corpo, via `@fontsource` (empacotadas no build, **sem depender de internet**) |
+| Tipografia | IBM Plex Sans (500/600) nos títulos, Roboto (400/500) no corpo, via `@fontsource` (empacotadas no build, sem depender de internet) |
 | Texto de apoio | `#595F67` (passa AA sobre branco), no lugar do cinza claro padrão |
 
 **Ilustrações: Open Doodles (CC0), não as do arquivo.** As ilustrações do Figma são do pacote "Indian Doodle"
-(Varun Trivedi / IconScout). A licença gratuita do IconScout **proíbe redistribuir os arquivos**, e o repositório da
+(Varun Trivedi / IconScout). A licença gratuita do IconScout proíbe redistribuir os arquivos, e o repositório da
 entrega é clonado pelo avaliador. No lugar delas usamos [Open Doodles](https://www.opendoodles.com/about), de Pablo
-Stanley, no mesmo estilo de traço preto e com licença **CC0** (uso, edição e redistribuição livres). O rosa original foi
+Stanley, no mesmo estilo de traço preto e com licença CC0 (uso, edição e redistribuição livres). O rosa original foi
 trocado pelas cores da paleta. Ficam em `front/src/assets/doodles/`, com um `LICENSE.md`. São usadas no login e no estado
-vazio da lista. O painel usa uma cena do [Humaaans](https://www.humaaans.com) (também de Pablo Stanley, **CC0**,
+vazio da lista. O painel usa uma cena do [Humaaans](https://www.humaaans.com) (também de Pablo Stanley, CC0,
 o estilo que popularizou o "Corporate Memphis"), recolorida para a paleta, num banner de boas-vindas com atalhos.
 O unDraw foi descartado pelo mesmo motivo do IconScout: a licença dele proíbe redistribuir as ilustrações em pacote.
 
@@ -887,5 +887,5 @@ O unDraw foi descartado pelo mesmo motivo do IconScout: a licença dele proíbe 
 - O estado vazio tem ilustração, título e o motivo.
 
 **Por quê:** o enunciado dá 20% da nota a "frontend e experiência de uso". Concentrar a identidade no tema mantém a
-mudança **só visual**: nenhuma regra, rota ou contrato mudou, e os testes continuaram passando (só duas asserções de
+mudança só visual: nenhuma regra, rota ou contrato mudou, e os testes continuaram passando (só duas asserções de
 descrição acessível foram ajustadas, porque agora incluem a dica do campo).
