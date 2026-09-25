@@ -9,6 +9,7 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import type { DashboardController } from './controller/dashboard.js';
 import type { RequestController } from './controller/requests.js';
 import { registerErrorHandling } from './errors.js';
@@ -18,6 +19,9 @@ import { dashboardRoutes } from './router/dashboard.js';
 import { healthRoutes, type HealthDeps } from './router/health.js';
 import { registerGlobalHooks } from './router/hooks.js';
 import { requestRoutes } from './router/requests.js';
+
+// Mensagens de validação do Zod em português, como as do domínio (o `errors[]` do 422 chega à tela).
+z.config(z.locales.ptBR());
 
 export interface ServerDeps {
   trustProxy: string | false;
