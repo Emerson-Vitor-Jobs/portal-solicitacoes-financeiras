@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { server } from '../../../test/msw';
@@ -68,6 +68,41 @@ describe('RequestListPage', () => {
     const supplierCalls = state.requestLog.filter((r) => r.url.searchParams.has('supplier'));
     expect(supplierCalls).toHaveLength(1);
     expect(router.state.location.search).toBe('?supplier=aurora');
+  });
+
+  test('"Limpar filtros" cancela a busca pendente e limpa o campo do fornecedor', async () => {
+    const user = userEvent.setup();
+    loginAs(FINANCE_EMAIL);
+    const { router } = renderApp('/requests?status=PENDING');
+    await screen.findByText('5 solicitações');
+
+    await user.type(screen.getByRole('textbox', { name: 'Fornecedor' }), 'aur');
+    await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    // Espera mais que o debounce: nada pode voltar para a URL nem para a API.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 600)));
+
+    expect(screen.getByRole('textbox', { name: 'Fornecedor' })).toHaveValue('');
+    expect(router.state.location.search).toBe('');
+    expect(state.requestLog.some((r) => r.url.searchParams.has('supplier'))).toBe(false);
+  });
+
+  test('o campo do fornecedor acompanha a URL quando ela muda por outro caminho', async () => {
+    const user = userEvent.setup();
+    loginAs(FINANCE_EMAIL);
+    const { router } = renderApp('/requests?supplier=norte');
+    const input = await screen.findByRole('textbox', { name: 'Fornecedor' });
+    expect(input).toHaveValue('norte');
+
+    await act(() => router.navigate('/requests?supplier=verde'));
+    expect(input).toHaveValue('verde');
+
+    // Digitação pendente + navegação externa (voltar): o texto descartado não volta para a URL.
+    await user.type(input, 'xyz');
+    await act(() => router.navigate('/requests'));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 600)));
+
+    expect(input).toHaveValue('');
+    expect(router.state.location.search).toBe('');
   });
 
   test('digitar o vencimento em dd/mm/aaaa envia YYYY-MM-DD, sem conversão de fuso', async () => {

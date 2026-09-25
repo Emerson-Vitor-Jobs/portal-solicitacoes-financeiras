@@ -15,7 +15,7 @@ import {
 } from '@mantine/core';
 import { useDebouncedCallback } from '@mantine/hooks';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { errorMessage } from '../../api/errors';
 import { BusinessDateInput } from '../../components/BusinessDateInput';
@@ -43,26 +43,33 @@ const STATUS_OPTIONS = enumValues(STATUS_LABELS).map((value) => ({
 const SUPPLIER_DEBOUNCE_MS = 400;
 
 // Busca por fornecedor com debounce. O texto digitado fica no estado local; a URL recebe o valor
-// depois da pausa. Se a URL mudar por fora (voltar, limpar filtros), o campo acompanha.
-function SupplierFilter({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
-  const [text, setText] = useState(value);
-  const [syncedValue, setSyncedValue] = useState(value);
-  if (value !== syncedValue) {
-    setSyncedValue(value);
-    setText(value);
+// depois da pausa. Se a URL mudar por outro caminho (voltar, limpar filtros), o campo acompanha e
+// o envio pendente é cancelado, para não devolver à URL um texto que já foi descartado.
+function useSupplierSearch(urlValue: string, onCommit: (value: string) => void) {
+  const [text, setText] = useState(urlValue);
+  const [syncedValue, setSyncedValue] = useState(urlValue);
+  if (urlValue !== syncedValue) {
+    setSyncedValue(urlValue);
+    setText(urlValue);
   }
   const commit = useDebouncedCallback(onCommit, SUPPLIER_DEBOUNCE_MS);
-  return (
-    <TextInput
-      label="Fornecedor"
-      placeholder="Buscar por nome"
-      value={text}
-      onChange={(event) => {
-        setText(event.currentTarget.value);
-        commit(event.currentTarget.value);
-      }}
-    />
-  );
+  useEffect(() => {
+    // O envio feito pelo próprio debounce já terminou quando a URL muda; aqui só sobra o pendente
+    // de uma mudança externa.
+    commit.cancel();
+  }, [urlValue, commit]);
+
+  return {
+    text,
+    onChange(value: string) {
+      setText(value);
+      commit(value);
+    },
+    reset() {
+      commit.cancel();
+      setText('');
+    },
+  };
 }
 
 function RequestRow({ item }: { item: RequestListItem }) {
@@ -107,6 +114,15 @@ export function RequestListPage() {
     setSearchParams((prev) => withFilter(prev, name, value), { replace });
   }
 
+  const supplier = useSupplierSearch(filters.supplier, (value) =>
+    setFilter('supplier', value, true),
+  );
+
+  function clearFilters() {
+    supplier.reset();
+    setSearchParams(new URLSearchParams());
+  }
+
   return (
     <Stack>
       <Group justify="space-between">
@@ -128,9 +144,11 @@ export function RequestListPage() {
           clearable
           w={180}
         />
-        <SupplierFilter
-          value={filters.supplier}
-          onCommit={(value) => setFilter('supplier', value, true)}
+        <TextInput
+          label="Fornecedor"
+          placeholder="Buscar por nome"
+          value={supplier.text}
+          onChange={(event) => supplier.onChange(event.currentTarget.value)}
         />
         <BusinessDateInput
           label="Vencimento de"
@@ -148,8 +166,8 @@ export function RequestListPage() {
           clearable
           w={160}
         />
-        {hasAnyFilter(filters) && (
-          <Button variant="subtle" onClick={() => setSearchParams(new URLSearchParams())}>
+        {(hasAnyFilter(filters) || supplier.text !== '') && (
+          <Button variant="subtle" onClick={clearFilters}>
             Limpar filtros
           </Button>
         )}
