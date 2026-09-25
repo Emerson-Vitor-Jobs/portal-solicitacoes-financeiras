@@ -85,6 +85,9 @@ export function errorMessage(error: unknown): string {
     case 'NOT_IMPLEMENTED':
       return 'Esta função ainda não está disponível no servidor.';
   }
+  // O tipo garante os códigos do contrato, mas um servidor mais novo pode mandar um código que este
+  // build não conhece: a mensagem nunca fica vazia.
+  return `Erro inesperado do servidor (HTTP ${error.status}). Tente novamente.`;
 }
 
 export function tooManyRequestsMessage(retryAfterSeconds: number | null): string {
