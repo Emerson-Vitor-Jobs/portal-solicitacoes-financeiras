@@ -281,10 +281,18 @@ Fontes: [Postgres, Date/Time Types](https://www.postgresql.org/docs/current/data
 
 ### 6.3 Travas da data de pagamento
 O `mark-paid` rejeita com **422** `VALIDATION_FAILED` (`errors: [{ field: "paid_at", … }]`) quando:
-1. **Data futura:** `paid_at >= início do dia seguinte à data de referência, em SP` (respeita o `APP_TODAY`,
-   com o relógio injetável no service).
+1. **Data futura:** `paid_at > agora`, pelo **relógio real** (injetável no service, pros testes). **Revisada**, veja
+   abaixo.
 2. **Antes da aprovação:** `paid_at <` o instante do evento `APPROVED` da auditoria, lido **na mesma transação**
    do pagamento.
+- **Revisão (implementação):** a primeira versão limitava o "futuro" ao fim do dia de referência (`APP_TODAY`).
+  Na avaliação isso quebrava o fluxo principal: com `APP_TODAY=2026-09-18` e o relógio real depois dessa data, a
+  aprovação grava um instante real (ex.: 25/09). O pagamento precisaria ser ≤ 18/09 **e** ≥ 25/09, o que é impossível.
+  **Correção conceitual:** o enunciado usa o `APP_TODAY` como *data de referência para regras de calendário* (vencido,
+  pago no mês), pra tornar a avaliação reproduzível. Ele não manda falsificar o relógio dos eventos. "Futuro", para
+  o instante de um pagamento, é um fato do relógio real. As regras de calendário continuam pelo `APP_TODAY`.
+  No formulário, a data e a hora vêm pré-preenchidas com o "agora" real em SP, com o limite no hoje real. É só dica
+  de UX: quem garante é o servidor.
 - **Por quê:** o número "pago no mês" do dashboard depende dessa data. Uma data futura é impossível, e pagar antes
   de aprovar contradiz o fluxo que o portal impõe (`APPROVED → PAID`). O seed respeita as duas travas (todo
   pagamento é posterior à aprovação). O seed é inserido direto no banco, fora do service, então não passa por
