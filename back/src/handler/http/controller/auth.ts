@@ -9,7 +9,7 @@ import type {
   userSchema,
 } from '../../../types/auth.js';
 import type { User } from '../../../types/domain.js';
-import { SESSION_COOKIE } from '../router/hooks.js';
+import { SESSION_COOKIE } from '../session.js';
 
 export function toUserResponse(user: User): z.infer<typeof userSchema> {
   return { id: user.id, name: user.name, email: user.email, role: user.role };

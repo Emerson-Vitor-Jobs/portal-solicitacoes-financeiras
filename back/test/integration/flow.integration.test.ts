@@ -109,7 +109,6 @@ describe('política de log com erro real do banco (§14.5)', () => {
     expect((raw as pg.DatabaseError).detail).toContain('10000000000145');
     expect(serializeError(raw)).toEqual({ name: 'error', code: '23505' });
 
-    await app.close();
     const text = logs.text;
     expect(text).toContain('"status":409');
     for (const secret of ['10000000000145', '10.000.000/0001-45', 'NF-2026-9001', '155313']) {

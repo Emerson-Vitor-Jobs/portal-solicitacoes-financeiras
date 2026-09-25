@@ -53,8 +53,4 @@ export class DuplicateInvoiceError extends DomainError {
 }
 
 // O estado atual não permite a ação (inclui o perdedor de uma corrida). A mensagem traz o status atual (§5.5).
-export class InvalidTransitionError extends DomainError {
-  constructor(message: string) {
-    super(message);
-  }
-}
+export class InvalidTransitionError extends DomainError {}

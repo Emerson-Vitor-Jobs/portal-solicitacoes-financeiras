@@ -39,7 +39,6 @@ export class FakeAuthRepository implements AuthRepository {
     if (!user) return Promise.resolve(null);
     return Promise.resolve({
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
-      createdAt: s.now,
       lastSeenAt: s.lastSeenAt,
       expiresAt: s.expiresAt,
     });

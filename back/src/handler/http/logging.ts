@@ -64,9 +64,9 @@ export function logControllerOptions(): Pick<FastifyServerOptions, 'logControlle
 // propósito, então a assinatura é afirmada aqui, num ponto só.
 type ErrSerializer = NonNullable<NonNullable<FastifyLoggerOptions['serializers']>['err']>;
 
-export function loggerOptions(stream?: LogStream): FastifyServerOptions['logger'] {
+export function loggerOptions(level: string, stream?: LogStream): FastifyServerOptions['logger'] {
   return {
-    level: process.env.LOG_LEVEL ?? 'info',
+    level,
     // Segunda camada: mesmo que alguém logue o objeto errado, estes caminhos saem censurados.
     redact: {
       paths: [

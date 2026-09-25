@@ -27,6 +27,7 @@ export interface ServerDeps {
   trustProxy: string | false;
   // false desliga o log (testes); um stream captura as linhas (teste da política de log, §14.5).
   logger?: false | { stream: LogStream };
+  logLevel: string;
   health: HealthDeps;
   auth: AuthRouteDeps;
   requests: RequestController;
@@ -36,7 +37,7 @@ export interface ServerDeps {
 // Monta o app sem abrir porta: os testes usam app.inject() e o gerador do OpenAPI usa app.swagger().
 export async function buildServer(deps: ServerDeps): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: deps.logger === false ? false : loggerOptions(deps.logger?.stream),
+    logger: deps.logger === false ? false : loggerOptions(deps.logLevel, deps.logger?.stream),
     ...logControllerOptions(),
     trustProxy: deps.trustProxy,
   });

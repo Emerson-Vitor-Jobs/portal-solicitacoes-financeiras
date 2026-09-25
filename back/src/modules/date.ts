@@ -45,12 +45,15 @@ export function businessDateOf(instant: Date): string {
 }
 
 // A data de referência ("hoje"): APP_TODAY quando definida; senão, a data atual em America/Sao_Paulo (não UTC).
-export function referenceDate(appToday: string | undefined, now: Date): string {
-  if (appToday !== undefined) {
-    if (!isBusinessDate(appToday)) throw new Error(`APP_TODAY inválida: ${appToday}`);
-    return appToday;
+export function parseAppToday(appToday: string | undefined): string | undefined {
+  if (appToday !== undefined && !isBusinessDate(appToday)) {
+    throw new Error(`APP_TODAY inválida (use YYYY-MM-DD): ${appToday}`);
   }
-  return businessDateOf(now);
+  return appToday;
+}
+
+export function referenceDate(appToday: string | undefined, now: Date): string {
+  return parseAppToday(appToday) ?? businessDateOf(now);
 }
 
 // Vencida = PENDING ou APPROVED com vencimento ANTERIOR à referência. Vence hoje ainda não está vencida.

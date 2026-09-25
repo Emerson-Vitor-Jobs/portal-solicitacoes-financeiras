@@ -15,7 +15,6 @@ export interface UserCredentials extends User {
 
 export interface StoredSession {
   user: User;
-  createdAt: Date;
   lastSeenAt: Date;
   expiresAt: Date;
 }

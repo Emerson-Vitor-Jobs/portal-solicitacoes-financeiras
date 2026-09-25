@@ -12,6 +12,7 @@ const app = await buildApp(
     appToday: undefined,
     cookieSecure: false,
     loginRateLimit: { perEmail: 5, perIp: 20, windowMs: 15 * 60_000 },
+    logLevel: 'info',
   },
   { logger: false },
 );

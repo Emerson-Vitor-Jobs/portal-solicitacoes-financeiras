@@ -42,7 +42,8 @@ export async function buildApp(
 
   return buildServer({
     trustProxy: config.trustProxy,
-    ...(options.logger !== undefined ? { logger: options.logger } : {}),
+    logger: options.logger,
+    logLevel: config.logLevel,
     health: { ping: () => ping(pool) },
     auth: {
       service: auth,

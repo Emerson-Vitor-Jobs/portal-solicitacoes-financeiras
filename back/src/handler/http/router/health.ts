@@ -20,10 +20,11 @@ export function healthRoutes(app: FastifyInstance, deps: HealthDeps): void {
     handler: async (request, reply) => {
       try {
         await deps.ping();
-        return await reply.code(200).send({ status: 'ok' });
+        return { status: 'ok' as const };
       } catch (err) {
-        request.log.error({ err: { name: (err as Error).name } }, 'health: banco indisponível');
-        return await reply.code(503).send({ status: 'unavailable' });
+        request.log.error({ err }, 'health: banco indisponível');
+        reply.code(503);
+        return { status: 'unavailable' as const };
       }
     },
   });

@@ -140,7 +140,7 @@ function invalidTransition(current: Status, to: Status): InvalidTransitionError 
   return new InvalidTransitionError(`A solicitação está ${current}; não pode ir para ${to}.`);
 }
 
-function requireRole(actor: User, role: User['role']): void {
+function assertRole(actor: User, role: User['role']): void {
   if (actor.role !== role) throw new ForbiddenError();
 }
 
@@ -155,12 +155,12 @@ export class RequestService {
   }
 
   async create(actor: User, input: CreateRequestInput): Promise<RequestDetail> {
-    requireRole(actor, 'REQUESTER');
+    assertRole(actor, 'REQUESTER');
     const supplierCnpj = normalizeCnpj(input.supplierCnpj);
     if (!isValidCnpj(supplierCnpj)) {
       throw new ValidationError([{ field: 'supplier_cnpj', message: 'CNPJ inválido.' }]);
     }
-    const description = input.description?.trim() ? input.description.trim() : null;
+    const description = input.description?.trim() || null;
     const id = this.newId();
 
     // Sem "verificar antes de inserir": quem garante a unicidade, inclusive em corrida, é o UNIQUE do banco.
@@ -197,7 +197,7 @@ export class RequestService {
       {
         requesterId: actor.role === 'REQUESTER' ? actor.id : null,
         status: input.status ?? null,
-        supplier: supplier ? supplier : null,
+        supplier: supplier || null,
         dueFrom: input.dueFrom ?? null,
         dueTo: input.dueTo ?? null,
       },
@@ -225,11 +225,12 @@ export class RequestService {
   }
 
   async approve(actor: User, id: string): Promise<RequestDetail> {
+    assertRole(actor, 'FINANCE');
     return this.transition(actor, id, 'APPROVED', { reason: null });
   }
 
   async reject(actor: User, id: string, reason: string): Promise<RequestDetail> {
-    requireRole(actor, 'FINANCE');
+    assertRole(actor, 'FINANCE');
     const trimmed = reason.trim();
     if (trimmed === '') {
       throw new ValidationError([{ field: 'reason', message: 'Informe o motivo da rejeição.' }]);
@@ -240,7 +241,7 @@ export class RequestService {
   // Travas da data de pagamento (§6.3): nem posterior ao agora real, nem anterior à aprovação. O APP_TODAY vale só
   // para as regras de calendário (vencido, pago no mês).
   async markPaid(actor: User, id: string, input: MarkPaidInput): Promise<RequestDetail> {
-    requireRole(actor, 'FINANCE');
+    assertRole(actor, 'FINANCE');
     const paymentReference = input.paymentReference.trim();
     if (paymentReference === '') {
       throw new ValidationError([
@@ -287,7 +288,6 @@ export class RequestService {
     },
     afterUpdate?: (store: RequestStore) => Promise<void>,
   ): Promise<RequestDetail> {
-    requireRole(actor, 'FINANCE');
     if (!UUID.test(id)) throw new NotFoundError();
 
     const detail = await this.repo.inTransaction(async (store) => {
@@ -305,8 +305,8 @@ export class RequestService {
       });
       if (!changed) {
         // Perdeu a corrida: outra transação mudou o status entre a leitura e o UPDATE.
-        const now = await store.findStatus(id);
-        throw invalidTransition(now ?? current, to);
+        const latestStatus = await store.findStatus(id);
+        throw invalidTransition(latestStatus ?? current, to);
       }
       // Uma trava que lança aqui desfaz o UPDATE junto (ROLLBACK).
       if (afterUpdate) await afterUpdate(store);

@@ -70,6 +70,7 @@ export async function buildTestServer(options: TestServerOptions = {}): Promise<
   const app = await buildServer({
     trustProxy: false,
     logger: options.logStream ? { stream: options.logStream } : false,
+    logLevel: 'info',
     health: options.health ?? { ping: () => Promise.resolve() },
     auth: {
       service: auth,
@@ -102,11 +103,4 @@ export function sessionCookieOf(res: LightMyRequestResponse): string {
   const sid = res.cookies.find((c) => c.name === 'sid');
   if (!sid) throw new Error('resposta sem cookie sid');
   return `sid=${sid.value}`;
-}
-
-export function expectProblemShape(res: LightMyRequestResponse): unknown {
-  if (!String(res.headers['content-type']).includes('application/problem+json')) {
-    throw new Error(`esperava application/problem+json, veio ${res.headers['content-type']}`);
-  }
-  return res.json();
 }

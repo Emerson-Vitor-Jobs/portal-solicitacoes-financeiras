@@ -1,5 +1,5 @@
 // Configuração lida do ambiente. Variável obrigatória ausente derruba a subida (nada de default silencioso).
-import { isBusinessDate } from './modules/date.js';
+import { parseAppToday } from './modules/date.js';
 
 export interface Config {
   databaseUrl: string;
@@ -11,6 +11,7 @@ export interface Config {
   // Flag `Secure` do cookie de sessão: false em http local, true em produção com HTTPS (§8.4).
   cookieSecure: boolean;
   loginRateLimit: { perEmail: number; perIp: number; windowMs: number };
+  logLevel: string;
 }
 
 export function mustGetEnv(name: string): string {
@@ -38,10 +39,7 @@ function boolean(name: string, fallback: boolean): boolean {
 }
 
 export function loadConfig(): Config {
-  const appToday = process.env.APP_TODAY || undefined;
-  if (appToday !== undefined && !isBusinessDate(appToday)) {
-    throw new Error(`APP_TODAY inválida (use YYYY-MM-DD): ${appToday}`);
-  }
+  const appToday = parseAppToday(process.env.APP_TODAY || undefined);
   return {
     databaseUrl: mustGetEnv('DATABASE_URL'),
     port: positiveInt('API_PORT', 3001),
@@ -54,5 +52,6 @@ export function loadConfig(): Config {
       perIp: positiveInt('LOGIN_RATE_LIMIT_PER_IP', 20),
       windowMs: positiveInt('LOGIN_RATE_LIMIT_WINDOW_MS', 15 * 60_000),
     },
+    logLevel: process.env.LOG_LEVEL ?? 'info',
   };
 }

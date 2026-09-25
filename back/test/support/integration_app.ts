@@ -15,6 +15,7 @@ export async function buildIntegrationApp(
       appToday: options.appToday ?? '2026-09-18',
       cookieSecure: false,
       loginRateLimit: RELAXED_RATE_LIMIT,
+      logLevel: 'info',
     },
     { logger: options.logStream ? { stream: options.logStream } : false },
   );

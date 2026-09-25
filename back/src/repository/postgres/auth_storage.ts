@@ -29,7 +29,6 @@ function mapCredentials(row: IFindUserByEmailResult): UserCredentials {
 function mapSession(row: IFindSessionWithUserResult): StoredSession {
   return {
     user: { id: row.id, name: row.name, email: row.email, role: toRole(row.role) },
-    createdAt: row.created_at,
     lastSeenAt: row.last_seen_at,
     expiresAt: row.expires_at,
   };

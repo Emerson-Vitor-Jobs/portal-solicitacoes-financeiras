@@ -7,15 +7,12 @@ import type {
   onRequestHookHandler,
   preHandlerAsyncHookHandler,
 } from 'fastify';
-import type { AuthService } from '../../../service/auth.js';
-import { normalizeEmail } from '../../../service/auth.js';
+import { normalizeEmail, type AuthService } from '../../../service/auth.js';
 import { ForbiddenError } from '../../../service/errors.js';
 import type { Role } from '../../../types/common.js';
+import { TooManyAttemptsError } from '../errors.js';
 import { sessionUser } from '../request_context.js';
-
-export const SESSION_COOKIE = 'sid';
-export const CSRF_HEADER = 'x-requested-with';
-export const CSRF_VALUE = 'gex-web';
+import { CSRF_HEADER, CSRF_VALUE, SESSION_COOKIE } from '../session.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -45,15 +42,6 @@ export function requireRole(role: Role): onRequestHookHandler {
     }
     done();
   };
-}
-
-// Erro do rate limit: o handler central (errors.ts) já traduz statusCode 429 para o Problem TOO_MANY_REQUESTS.
-class TooManyAttemptsError extends Error {
-  override readonly name = 'TooManyAttemptsError';
-  readonly statusCode = 429;
-  constructor() {
-    super('Muitas tentativas de login. Tente novamente em instantes.');
-  }
 }
 
 export interface LoginRateLimit {

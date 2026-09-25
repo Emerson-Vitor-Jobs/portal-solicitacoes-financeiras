@@ -7,6 +7,7 @@ describe('GET /api/health', () => {
     const res = await app.inject({ method: 'GET', url: '/api/health' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ status: 'ok' });
+    await app.close();
   });
 
   test('503 quando o banco não responde', async () => {
@@ -16,5 +17,6 @@ describe('GET /api/health', () => {
     const res = await app.inject({ method: 'GET', url: '/api/health' });
     expect(res.statusCode).toBe(503);
     expect(res.json()).toEqual({ status: 'unavailable' });
+    await app.close();
   });
 });

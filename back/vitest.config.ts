@@ -10,7 +10,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
+          include: ['src/**/*.test.ts'],
           exclude: ['**/*.integration.test.ts'],
         },
       },
@@ -18,7 +18,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'integration',
-          include: ['src/**/*.integration.test.ts', 'test/**/*.integration.test.ts'],
+          include: ['test/**/*.integration.test.ts'],
           setupFiles: ['test/support/integration_setup.ts'],
           // Os arquivos compartilham o mesmo banco: um de cada vez.
           fileParallelism: false,

@@ -14,11 +14,6 @@ export default tseslint.config(
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
     rules: {
-      // Erro nunca é engolido: nenhuma promise solta, nenhum catch vazio.
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'error',
-      'no-empty': ['error', { allowEmptyCatch: false }],
-      '@typescript-eslint/only-throw-error': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
     },
   },

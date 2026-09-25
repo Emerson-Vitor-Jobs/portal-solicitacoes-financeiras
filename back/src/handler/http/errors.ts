@@ -15,6 +15,14 @@ import {
 } from '../../service/errors.js';
 import type { Problem, ProblemCode } from '../../types/common.js';
 
+export class TooManyAttemptsError extends Error {
+  override readonly name = 'TooManyAttemptsError';
+  readonly statusCode = 429;
+  constructor() {
+    super('Muitas tentativas de login. Tente novamente em instantes.');
+  }
+}
+
 const TITLES: Record<number, string> = {
   400: 'Bad Request',
   401: 'Unauthorized',
@@ -92,7 +100,7 @@ export function registerErrorHandling(app: FastifyInstance): void {
       return sendProblem(reply, problem(429, 'TOO_MANY_REQUESTS', err.message));
     }
     // Inesperado: loga só nome e código (a mensagem de um erro do pg pode trazer dados, §14.5).
-    request.log.error({ err: { name: err.name, code: err.code } }, 'erro não tratado');
+    request.log.error({ err }, 'erro não tratado');
     return sendProblem(reply, problem(500, 'INTERNAL', 'Erro interno.'));
   });
 

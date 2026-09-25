@@ -28,7 +28,7 @@ CREATE INDEX audit_events_request_id_idx ON audit_events (request_id, created_at
 CREATE FUNCTION audit_events_append_only() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-  RAISE EXCEPTION 'audit_events é append-only: % não é permitido', TG_OP
+  RAISE EXCEPTION 'audit_events is append-only: % is not allowed', TG_OP
     USING ERRCODE = 'insufficient_privilege';
 END;
 $$;

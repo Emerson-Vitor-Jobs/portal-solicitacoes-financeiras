@@ -176,7 +176,8 @@ export class RequestStorage implements RequestRepository {
       async (client) => {
         const rows = await listRequests.run({ ...where, ...page }, client);
         const [count] = await countRequests.run(where, client);
-        return { items: rows.map(mapRequest), total: toSafeInteger(count?.total ?? '0') };
+        if (!count) throw new Error('agregação da contagem não devolveu linha');
+        return { items: rows.map(mapRequest), total: toSafeInteger(count.total) };
       },
       { isolation: 'REPEATABLE READ', readOnly: true },
     );

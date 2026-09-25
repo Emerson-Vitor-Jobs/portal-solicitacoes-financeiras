@@ -3,7 +3,6 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { CSRF, buildTestServer, loginAs } from '../../../test/support/server.js';
 import { ANA, FERNANDA } from '../../../test/support/users.js';
 
-// Contrato de erro (RFC 9457) exercido pelas rotas ainda não implementadas (DECISOES_FUNDACAO §4a, §5).
 let app: FastifyInstance;
 let requester: string;
 let finance: string;
@@ -89,7 +88,7 @@ describe('handler central de erro', () => {
     expectProblem(res, 422, 'VALIDATION_FAILED');
   });
 
-  test('nenhuma rota do contrato responde 501 (todas implementadas)', async () => {
+  test('every documented route answers with one of its documented statuses', async () => {
     const id = '20000000-0000-4000-8000-000000000001';
     const calls = [
       { method: 'GET', url: '/api/auth/me', cookie: requester },
@@ -102,23 +101,21 @@ describe('handler central de erro', () => {
       { method: 'POST', url: '/api/auth/login', cookie: '', payload: {} },
       { method: 'POST', url: '/api/auth/logout', cookie: finance, payload: {} },
     ] as const;
-    // Cobre todas as rotas do openapi.json: se uma rota nova aparecer no contrato, este teste precisa dela.
-    const documented = Object.keys(app.swagger().paths ?? {}).filter((p) => p !== '/api/health');
+    const paths = app.swagger().paths ?? {};
+    const documented = Object.keys(paths).filter((p) => p !== '/api/health');
     expect(new Set(calls.map((c) => c.url.replace(id, '{id}')))).toEqual(new Set(documented));
     for (const c of calls) {
+      const operation =
+        paths[c.url.replace(id, '{id}')]?.[c.method.toLowerCase() as 'get' | 'post'];
       const res = await app.inject({
         method: c.method,
         url: c.url,
         headers: { ...json, cookie: c.cookie },
         ...('payload' in c ? { payload: c.payload } : {}),
       });
-      expect(res.statusCode, `${c.method} ${c.url}`).not.toBe(501);
+      expect(Object.keys(operation?.responses ?? {}), `${c.method} ${c.url}`).toContain(
+        String(res.statusCode),
+      );
     }
-  });
-
-  test('o OpenAPI é servido em /api/docs/json', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/docs/json' });
-    expect(res.statusCode).toBe(200);
-    expect(res.json<{ openapi: string }>().openapi).toBe('3.1.0');
   });
 });

@@ -39,7 +39,6 @@ export interface IFindSessionWithUserParams {
 
 /** 'FindSessionWithUser' return type */
 export interface IFindSessionWithUserResult {
-  created_at: Date;
   email: string;
   expires_at: Date;
   id: string;
@@ -54,12 +53,12 @@ export interface IFindSessionWithUserQuery {
   result: IFindSessionWithUserResult;
 }
 
-const findSessionWithUserIR: any = {"usedParamSet":{"idHash":true},"params":[{"name":"idHash","required":true,"transform":{"type":"scalar"},"locs":[{"a":148,"b":155}]}],"statement":"SELECT s.created_at, s.last_seen_at, s.expires_at, u.id, u.name, u.email, u.role\nFROM sessions s\nJOIN users u ON u.id = s.user_id\nWHERE s.id_hash = :idHash!"};
+const findSessionWithUserIR: any = {"usedParamSet":{"idHash":true},"params":[{"name":"idHash","required":true,"transform":{"type":"scalar"},"locs":[{"a":134,"b":141}]}],"statement":"SELECT s.last_seen_at, s.expires_at, u.id, u.name, u.email, u.role\nFROM sessions s\nJOIN users u ON u.id = s.user_id\nWHERE s.id_hash = :idHash!"};
 
 /**
  * Query generated from SQL:
  * ```
- * SELECT s.created_at, s.last_seen_at, s.expires_at, u.id, u.name, u.email, u.role
+ * SELECT s.last_seen_at, s.expires_at, u.id, u.name, u.email, u.role
  * FROM sessions s
  * JOIN users u ON u.id = s.user_id
  * WHERE s.id_hash = :idHash!
