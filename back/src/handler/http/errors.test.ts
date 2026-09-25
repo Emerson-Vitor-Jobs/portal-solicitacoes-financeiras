@@ -1,20 +1,15 @@
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { buildServer } from './server.js';
+import { CSRF, buildTestServer } from '../../../test/support/server.js';
 
 // Contrato de erro (RFC 9457) exercido pelas rotas ainda não implementadas (DECISOES_FUNDACAO §4a, §5).
 let app: FastifyInstance;
 beforeAll(async () => {
-  app = await buildServer({
-    trustProxy: false,
-    logger: false,
-    health: { ping: () => Promise.resolve() },
-  });
-  await app.ready();
+  ({ app } = await buildTestServer());
 });
 afterAll(() => app.close());
 
-const json = { 'content-type': 'application/json' };
+const json = { 'content-type': 'application/json', ...CSRF };
 
 function expectProblem(
   res: { statusCode: number; headers: Record<string, unknown>; json: () => unknown },

@@ -1,16 +1,13 @@
-// Composition root: lê a config, monta as dependências à mão e sobe o servidor.
+// Ponto de entrada: lê a config, abre o pool, monta o app (a fiação está em app.ts) e sobe o servidor.
+import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
-import { buildServer } from './handler/http/server.js';
-import { createPool, ping } from './repository/postgres/pool.js';
+import { createPool } from './repository/postgres/pool.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
   const pool = createPool(config.databaseUrl);
 
-  const app = await buildServer({
-    trustProxy: config.trustProxy,
-    health: { ping: () => ping(pool) },
-  });
+  const app = await buildApp(pool, config);
 
   // O Node roda como PID 1 no container (exec no entrypoint): sem handler, o SIGTERM do
   // `docker compose down` seria ignorado e o container só morreria no timeout.
