@@ -59,7 +59,7 @@ só nas duas bordas:
    compara os dados de entrada e de saída campo a campo, sem tradução mental.
 3. **Dentro do código, TypeScript idiomático.** `camelCase` é a convenção da linguagem e dos linters. Um
    domínio em `snake_case` seria o formato do banco vazando pra regra de negócio.
-4. **É o modelo idiomático do Go**, meu padrão de referência. Em Go, o campo da struct é `CamelCase` e a tag é `json:"snake_case"`. Aqui a tag
+4. **É o modelo idiomático em linguagens tipadas como Go.** Em Go, o campo da struct é `CamelCase` e a tag é `json:"snake_case"`. Aqui a tag
    vira a função de borda, e o princípio é o mesmo: o formato externo é detalhe de serialização, não de domínio.
 5. **Isolamento de mudança.** Renomear uma coluna mexe só no `mapX()`. Mudar o contrato público mexe só no
    `toXResponse()` e no schema. O domínio não se move em nenhum dos casos.
@@ -778,33 +778,45 @@ Fontes: registro do npm (`registry.npmjs.org`, `peerDependencies` de cada pacote
 
 ## 16. Padrões de arquitetura — FECHADA
 
-**Resumo:** arquitetura em camadas com **Ports and Adapters no lado de saída** (persistência), e padrões do *Patterns of
-Enterprise Application Architecture* (Fowler) dentro das camadas.
+**Resumo:** arquitetura em camadas com **Ports and Adapters pragmático**: porta formal no lado de saída (persistência).
+No lado de entrada, a camada `handler/` é o adaptador que decide *quando e como* o código dispara, e chama o service
+direto. Dentro das camadas entram os padrões do *Patterns of Enterprise Application Architecture* (Fowler).
 
-### 16.1 Ports and Adapters (hexagonal), aplicado só no lado de saída
-| Lado | Hexagonal "completo" | Este projeto |
+**O critério de todas as escolhas abaixo é o que o projeto pede, não preferência de estilo.** O enunciado diz:
+*"Valorizamos uma solução pequena, correta e fácil de entender. Decisões simples e bem executadas valem mais que
+funcionalidades extras."* E o escopo é pequeno e conhecido: **1 gatilho** (HTTP), **3 entidades** (usuário,
+solicitação, evento de auditoria), **1 banco**, prazo de 48 h. Cada padrão entra só se resolve um problema que esse
+escopo tem.
+
+### 16.1 Ports and Adapters: onde entra e onde não entra
+| Lado | Hexagonal completo | Este projeto |
 | --- | --- | --- |
 | **Saída** (driven: banco) | porta + adaptador | ✅ o service declara a interface de que precisa (**a porta**, ex.: `RequestRepository`) no próprio arquivo; o `*_storage.ts` com PgTyped a implementa (**o adaptador**); o `main.ts` liga um no outro |
-| **Entrada** (driving: HTTP) | porta de entrada (interface de caso de uso) chamada pelo adaptador | ❌ o controller chama o **service concreto** |
+| **Entrada** (driving: HTTP) | porta de entrada (interface de caso de uso) chamada por vários adaptadores | ❌ o controller (adaptador HTTP) chama o **service concreto** |
+| **Modelo** | entidade de domínio separada do DTO, com mapeamento nas duas direções | tipos de domínio em `types/`, com conversão só nas bordas (§3) |
 | **Organização** | pastas `ports/`, `adapters/`, `domain/` | camadas `handler/`, `service/`, `repository/` |
 
-**Por quê, no lado de saída:**
-1. **A dependência aponta pra dentro.** O service (regra de negócio) não conhece Postgres, PgTyped nem Fastify. Trocar a
-   tecnologia de persistência não toca na regra.
-2. **Testabilidade real.** Os testes de service usam um fake escrito à mão que implementa a porta. Isso só é possível
-   porque a porta existe.
-3. **É o idioma "consumer defines the interface" do Go**, que é Ports and Adapters no estilo Go: a interface nasce de quem
-   consome, pequena e com só o que ele usa, e não de quem implementa.
+**Por que a porta existe no lado de saída (o projeto pede):**
+1. **As regras críticas precisam ser testáveis sem banco:** transições, travas de pagamento (§6.3), normalização (§7.2).
+   Com a porta, o teste do service usa um fake escrito à mão, e o teste de integração usa o adaptador real (§9.5). Sem a
+   porta, todo teste de regra dependeria do Postgres.
+2. **A regra de negócio não conhece a tecnologia:** o service não importa Postgres, PgTyped nem Fastify. É isso que deixa
+   o service fácil de ler e de explicar, que é um requisito explícito do enunciado.
+3. A interface nasce do consumidor (o service), pequena e com só o que ele usa, e não de quem implementa.
 
-**Por quê, sem porta no lado de entrada:**
-1. **Só existe um adaptador de entrada (HTTP)**, e o controller já é fino (valida → chama o service → responde). Uma
-   interface ali não teria um segundo adaptador pra trocar.
-2. **Não há ganho de teste:** o service é testado direto, e o HTTP é testado com `app.inject()`.
-3. **Cerimônia sem problema pra resolver.** Se surgir um segundo gatilho (fila, cron, CLI), a porta de entrada nasce
-   junto com ele, por um motivo real.
+**Por que não há porta no lado de entrada (o projeto não pede):**
+1. **Existe um único gatilho (HTTP).** A porta de entrada se paga quando vários adaptadores (HTTP, fila, cron, CLI) chamam
+   o mesmo caso de uso. Aqui não haveria um segundo adaptador pra plugar.
+2. **Não há ganho de teste:** o service é testado direto, e o HTTP com `app.inject()`.
+3. Se o escopo ganhar um segundo gatilho, a porta de entrada nasce junto com ele, por um motivo real. O nome
+   `handler/http/` já deixa espaço pra um `handler/cron/`.
 
-**Por quê as camadas, e não pastas `ports/`/`adapters/`:** a camada diz *o papel* do código (quem dispara, quem decide,
-quem persiste), que é o que se procura ao ler. As portas vivem junto do consumidor (no service), não num pacote à parte.
+**Por que não entidade de domínio separada do DTO:** com 3 entidades e regras concentradas nos services, dobrar os tipos
+e os mapeadores (domínio ↔ persistência ↔ contrato) seria código sem problema pra resolver. As duas bordas que importam
+já estão isoladas pelo `mapX()` e pelo `toXResponse()` (§3).
+
+**Por que camadas e não pastas `ports/`/`adapters/`:** a camada diz *o papel* do código (quem dispara, quem decide, quem
+persiste), que é o que se procura ao ler e ao avaliar. As portas vivem junto do consumidor (no service).
 
 ### 16.2 Os outros padrões, onde aparecem e por quê
 | Padrão | Onde | Por quê |
@@ -822,4 +834,5 @@ quem persiste), que é o que se procura ao ler. As portas vivem junto do consumi
 ### 16.3 O que não usamos, de propósito
 ORM / Active Record (§12) · container de DI · CQRS · Event Sourcing · DDD tático (agregados, value objects por toda
 parte) · hexagonal completo com porta de entrada. Todos resolvem problemas de escala, de domínio complexo ou de
-múltiplos gatilhos que este escopo não tem.
+múltiplos gatilhos. **O escopo deste projeto (1 gatilho, 3 entidades, 1 banco) não tem esses problemas**, e o
+enunciado pede explicitamente uma solução pequena e fácil de entender.

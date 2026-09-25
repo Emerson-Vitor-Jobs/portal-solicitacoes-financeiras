@@ -1,10 +1,10 @@
 # Tecnologias para o back (`projeto/back`)
 
-Estilo de referência: meu padrão de backend em Go (Gin + pgx + sqlc + goose).
+Referência de estilo: backends em Go com Gin + pgx + sqlc + goose (SQL à mão, camadas, sem ORM).
 Objetivo: replicar o mesmo preciosismo em TypeScript — camadas claras, SQL escrito à mão,
 sem ORM, sem framework de DI, erros nunca engolidos, testes em todas as camadas.
 
-| Área | Escolha | Equivalente no padrão Go |
+| Área | Escolha | Equivalente em Go |
 | --- | --- | --- |
 | Runtime | Node.js + TypeScript (strict) | Go |
 | HTTP | Fastify | Gin |
