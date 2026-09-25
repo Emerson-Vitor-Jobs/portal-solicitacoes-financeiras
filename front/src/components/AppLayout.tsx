@@ -90,7 +90,6 @@ export function AppLayout() {
       to: '/requests',
       label: 'Solicitações',
       icon: <IconFileInvoice size={20} stroke={1.8} />,
-      end: true,
     },
   ];
 
