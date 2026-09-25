@@ -19,11 +19,22 @@ import { useRequestAction } from './use-request-action';
 
 type ModalProps = { request: RequestDetail; onClose: () => void };
 
-// Erro que não é de campo (403, 500, 422 sem campo conhecido). O 409 fecha o modal antes.
-function MutationError({ error }: { error: unknown }) {
+// Erro que não aparece num campo do modal: 403, 500, 422 sem errors[] ou 422 em campo que o modal
+// não tem (`mappedFields` são os campos que o próprio modal mostra). O 409 fecha o modal antes.
+function MutationError({ error, mappedFields }: { error: unknown; mappedFields: string[] }) {
   if (error === null) return null;
   if (isApiError(error) && error.code === 'VALIDATION_FAILED' && error.fieldErrors.length > 0) {
-    return null;
+    const unmapped = error.fieldErrors.filter((e) => !mappedFields.includes(e.field));
+    if (unmapped.length === 0) return null;
+    return (
+      <Alert color="red" role="alert" title="Dados inválidos">
+        {unmapped.map((e) => (
+          <Text key={`${e.field}:${e.message}`} size="sm">
+            {e.message}
+          </Text>
+        ))}
+      </Alert>
+    );
   }
   return (
     <Alert color="red" role="alert">
@@ -49,7 +60,7 @@ export function ApproveModal({ request, onClose }: ModalProps) {
     <Modal opened onClose={onClose} title="Aprovar solicitação">
       <Stack>
         <Summary request={request} />
-        <MutationError error={mutation.error} />
+        <MutationError error={mutation.error} mappedFields={[]} />
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
             Cancelar
@@ -67,6 +78,10 @@ export function ApproveModal({ request, onClose }: ModalProps) {
     </Modal>
   );
 }
+
+// Campos do contrato que cada modal mostra no próprio campo.
+const REJECT_FIELDS = ['reason'];
+const MARK_PAID_FIELDS = ['paid_at', 'payment_reference'];
 
 const rejectSchema = z.object({
   reason: z
@@ -97,7 +112,7 @@ export function RejectModal({ request, onClose }: ModalProps) {
       <form noValidate onSubmit={(event) => void onSubmit(event)}>
         <Stack>
           <Summary request={request} />
-          <MutationError error={mutation.error} />
+          <MutationError error={mutation.error} mappedFields={REJECT_FIELDS} />
           <Textarea
             label="Motivo da rejeição"
             withAsterisk
@@ -180,7 +195,7 @@ export function MarkPaidModal({ request, onClose }: ModalProps) {
       <form noValidate onSubmit={(event) => void onSubmit(event)}>
         <Stack>
           <Summary request={request} />
-          <MutationError error={mutation.error} />
+          <MutationError error={mutation.error} mappedFields={MARK_PAID_FIELDS} />
           <Group grow align="flex-start">
             <Controller
               control={form.control}

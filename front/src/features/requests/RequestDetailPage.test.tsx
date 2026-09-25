@@ -216,4 +216,48 @@ describe('RequestDetailPage', () => {
       ),
     );
   });
+
+  test('422 em campo que o modal não tem aparece no alerta do modal', async () => {
+    const user = userEvent.setup();
+    loginAs(FINANCE_EMAIL);
+    server.use(
+      http.post('*/api/requests/:id/decision', () =>
+        problem(422, 'VALIDATION_FAILED', 'Dados inválidos.', {
+          errors: [{ field: 'decision', message: 'Decisão inválida.' }],
+        }),
+      ),
+    );
+    renderApp(`/requests/${REQUEST_BY_STATUS.PENDING}`);
+
+    await user.click(await screen.findByRole('button', { name: 'Aprovar' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Aprovar solicitação' }));
+    await user.click(dialog.getByRole('button', { name: 'Confirmar aprovação' }));
+
+    expect(await dialog.findByRole('alert')).toHaveTextContent('Decisão inválida.');
+  });
+
+  test('422 no campo do modal aparece no campo, sem repetir no alerta', async () => {
+    const user = userEvent.setup();
+    loginAs(FINANCE_EMAIL);
+    server.use(
+      http.post('*/api/requests/:id/decision', () =>
+        problem(422, 'VALIDATION_FAILED', 'Dados inválidos.', {
+          errors: [{ field: 'reason', message: 'Motivo curto demais.' }],
+        }),
+      ),
+    );
+    renderApp(`/requests/${REQUEST_BY_STATUS.PENDING}`);
+
+    await user.click(await screen.findByRole('button', { name: 'Rejeitar' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Rejeitar solicitação' }));
+    await user.type(dialog.getByLabelText(/Motivo da rejeição/), 'x');
+    await user.click(dialog.getByRole('button', { name: 'Confirmar rejeição' }));
+
+    await waitFor(() =>
+      expect(dialog.getByLabelText(/Motivo da rejeição/)).toHaveAccessibleDescription(
+        'Motivo curto demais.',
+      ),
+    );
+    expect(dialog.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });
