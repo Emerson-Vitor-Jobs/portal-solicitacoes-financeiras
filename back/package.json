@@ -13,10 +13,12 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "gen:sql": "./scripts/gen-sql.sh"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@pgtyped/cli": "2.4.3",
     "@types/node": "24.13.6",
     "@types/pg": "8.23.1",
     "@vitest/coverage-v8": "5.0.1",
@@ -30,6 +32,7 @@
     "vitest": "5.0.1"
   },
   "dependencies": {
+    "@pgtyped/runtime": "2.4.2",
     "fastify": "5.12.5",
     "pg": "8.23.0"
   }

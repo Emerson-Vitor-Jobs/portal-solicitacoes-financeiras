@@ -583,9 +583,23 @@ RETURNING *;
 - **Precisa do banco de pé pra gerar.** Mitigação: um script só (`gen:sql`), e o código gerado fica commitado.
 - **Diferença de sintaxe em relação ao sqlc:** `/* @name X */` + `:param` no lugar de `-- name: X :one` + `$1`.
 
-**Verificação na E0 (30 min):** as 4 queries representativas (filtro com parâmetro nulo, `UPDATE` condicional com
-`RETURNING`, `INSERT` que viola o `UNIQUE` devolvendo o `23505` intacto, agregação com `FILTER`) + `run(params, client)`
-dentro de uma transação. Se algo falhar, **para e discute**.
+**Verificação (E0d) — APROVADA.** Feita num banco descartável, com as 4 queries representativas, em tempo de execução:
+| Critério | Resultado |
+| --- | --- |
+| Filtro opcional com parâmetro nulo (`:status::text IS NULL OR status = :status`) | Tipado como `string \| null \| void`; `null` = sem filtro |
+| `UPDATE … WHERE status = 'PENDING' RETURNING *` | 1ª vez 1 linha, 2ª vez 0 linhas. Com duas conexões concorrentes, só uma vence |
+| `INSERT` violando `UNIQUE` | Erro chega intacto: `code = 23505`, `constraint`, e **`detail` com os valores** (daí o sanitizador da §14.5) |
+| Agregação com `FILTER` + override `"coluna!"` | Resultado não nulo, `SUM`/`COUNT` como string |
+| `run(params, client)` com o client de uma transação | `COMMIT` e `ROLLBACK` reais respeitados |
+| Tipos: `BIGINT` → `string`, `TIMESTAMPTZ` → `Date`, nulos corretos | ✅ |
+
+**Armadilha encontrada e corrigida:** por padrão o PgTyped tipa `DATE` como `Date`, mas o driver devolve **string**
+(`setTypeParser(1082)`, §6.0), então o tipo gerado mentiria. O `pgtyped.json` tem `typesOverrides:
+{ "date": { "parameter": "string", "return": "string" } }`, e o `typecheck` do spike confirmou o tipo certo.
+
+**Fluxo real:** `npm run gen:sql` (`back/scripts/gen-sql.sh`) sobe o postgres do compose, aplica as migrations com a
+imagem do dbmate e roda o PgTyped. A primeira query real (`health.sql` → `ping`) já passa por esse fluxo e é usada no
+`GET /api/health`.
 
 Contexto conceitual (SQL-first × query builder × ORM, e por que o TS costuma evitar SQL): `SQL_FIRST_VS_QUERY_BUILDERS.md`.
 
