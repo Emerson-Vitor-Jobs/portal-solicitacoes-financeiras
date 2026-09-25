@@ -57,8 +57,8 @@ O `back-test` usa um banco próprio (`gex_finance_it`) e nunca toca nos dados do
 `npm test` em `front/`; em `back/`, `npm run test:unit` e `npm run test:integration` (este precisa do Postgres do
 compose no ar).
 
-Os testes obrigatórios do enunciado estão marcados com o número no nome (ex.: `#3 duas criações duplicadas
-simultâneas`). O mapa completo está em [`docs/TESTING.md`](docs/TESTING.md).
+Os testes obrigatórios do enunciado estão marcados com o número no nome (ex.: `#3 two simultaneous duplicate
+creations`). O mapa completo está em [`docs/TESTING.md`](docs/TESTING.md).
 
 ## Como as regras críticas são garantidas
 
