@@ -775,3 +775,51 @@ Levantadas em 25/09/2026 no registro do npm, com os `peerDependencies` de cada p
 Fontes: registro do npm (`registry.npmjs.org`, `peerDependencies` de cada pacote);
 [typescript-eslint #12518: TypeScript 7.0.2 Support](https://github.com/typescript-eslint/typescript-eslint/issues/12518);
 [Mantine 8.x → 9.x](https://mantine.dev/guides/8x-to-9x/); [Mantine v8.0.0](https://mantine.dev/changelog/8-0-0/).
+
+## 16. Padrões de arquitetura — FECHADA
+
+**Resumo:** arquitetura em camadas com **Ports and Adapters no lado de saída** (persistência), e padrões do *Patterns of
+Enterprise Application Architecture* (Fowler) dentro das camadas.
+
+### 16.1 Ports and Adapters (hexagonal), aplicado só no lado de saída
+| Lado | Hexagonal "completo" | Este projeto |
+| --- | --- | --- |
+| **Saída** (driven: banco) | porta + adaptador | ✅ o service declara a interface de que precisa (**a porta**, ex.: `RequestRepository`) no próprio arquivo; o `*_storage.ts` com PgTyped a implementa (**o adaptador**); o `main.ts` liga um no outro |
+| **Entrada** (driving: HTTP) | porta de entrada (interface de caso de uso) chamada pelo adaptador | ❌ o controller chama o **service concreto** |
+| **Organização** | pastas `ports/`, `adapters/`, `domain/` | camadas `handler/`, `service/`, `repository/` |
+
+**Por quê, no lado de saída:**
+1. **A dependência aponta pra dentro.** O service (regra de negócio) não conhece Postgres, PgTyped nem Fastify. Trocar a
+   tecnologia de persistência não toca na regra.
+2. **Testabilidade real.** Os testes de service usam um fake escrito à mão que implementa a porta. Isso só é possível
+   porque a porta existe.
+3. **É o idioma "consumer defines the interface" do Go**, que é Ports and Adapters no estilo Go: a interface nasce de quem
+   consome, pequena e com só o que ele usa, e não de quem implementa.
+
+**Por quê, sem porta no lado de entrada:**
+1. **Só existe um adaptador de entrada (HTTP)**, e o controller já é fino (valida → chama o service → responde). Uma
+   interface ali não teria um segundo adaptador pra trocar.
+2. **Não há ganho de teste:** o service é testado direto, e o HTTP é testado com `app.inject()`.
+3. **Cerimônia sem problema pra resolver.** Se surgir um segundo gatilho (fila, cron, CLI), a porta de entrada nasce
+   junto com ele, por um motivo real.
+
+**Por quê as camadas, e não pastas `ports/`/`adapters/`:** a camada diz *o papel* do código (quem dispara, quem decide,
+quem persiste), que é o que se procura ao ler. As portas vivem junto do consumidor (no service), não num pacote à parte.
+
+### 16.2 Os outros padrões, onde aparecem e por quê
+| Padrão | Onde | Por quê |
+| --- | --- | --- |
+| **Layered Architecture** (controller → service → repository) | a estrutura de pastas | Cada camada tem uma responsabilidade só: gatilho, regra, persistência |
+| **Composition Root** + injeção manual (Seemann) | `main.ts` | Todo o grafo de dependências visível num lugar, sem container de DI nem mágica |
+| **Repository** (Fowler) | `*_storage.ts` | O service pede "dados de negócio", não escreve SQL |
+| **Transaction Script** (Fowler) | cada caso de uso do service | O domínio é um fluxo com poucas regras. Um Domain Model rico (DDD, agregados) seria exagero pra esse escopo |
+| **Data Mapper** / **DTO** (Fowler) | `mapX()` (linha → domínio) / `toXResponse()` (domínio → JSON) | Isola o formato do banco e o contrato público do domínio (§3) |
+| **Máquina de estados por tabela de transições** | transições de status | Uma tabela com as transições permitidas é a regra inteira num lugar só. O State pattern (GoF), com uma classe por estado, seria peso sem ganho com 4 estados |
+| **Controle de concorrência otimista (compare-and-set)** | `UPDATE … WHERE status = esperado` | Atômico no banco. 0 linhas afetadas = alguém mudou antes → 409 (§5.5) |
+| **Factory** | `buildServer()` | Monta o app sem abrir porta, pros testes |
+| **Fake** (test double, Meszaros) | testes de service | Implementa a porta de verdade, sem `vi.mock` mágico |
+
+### 16.3 O que não usamos, de propósito
+ORM / Active Record (§12) · container de DI · CQRS · Event Sourcing · DDD tático (agregados, value objects por toda
+parte) · hexagonal completo com porta de entrada. Todos resolvem problemas de escala, de domínio complexo ou de
+múltiplos gatilhos que este escopo não tem.
