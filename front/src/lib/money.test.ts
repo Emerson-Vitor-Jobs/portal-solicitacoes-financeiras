@@ -3,7 +3,7 @@ import { formatCents, maskMoneyDigits, parseBRLToCents } from './money';
 
 describe('#1 parseBRLToCents', () => {
   test.each(Object.entries(MONEY_PARSE_EXAMPLES))(
-    '#1 exemplo oficial do expected_results.json: %j → %i',
+    '#1 official expected_results.json example: %j → %i',
     (text, cents) => {
       expect(parseBRLToCents(text)).toBe(cents);
     },
@@ -18,7 +18,7 @@ describe('#1 parseBRLToCents', () => {
     ['  R$   10,5  ', 1050],
     ['1.000.000,00', 100000000],
     ['0,10', 10],
-  ])('#1 aceita %j → %i', (text, cents) => {
+  ])('#1 accepts %j → %i', (text, cents) => {
     expect(parseBRLToCents(text)).toBe(cents);
   });
 
@@ -39,7 +39,7 @@ describe('#1 parseBRLToCents', () => {
     '10,',
     'US$ 10',
     '99999999999999999,99',
-  ])('#1 rejeita %j', (text) => {
+  ])('#1 rejects %j', (text) => {
     expect(parseBRLToCents(text)).toBeNull();
   });
 });
@@ -57,14 +57,14 @@ describe('formatCents', () => {
     expect(formatCents(cents)).toBe(text);
   });
 
-  test('formatar e reler devolve o mesmo valor', () => {
+  test('formatting and parsing back returns the same value', () => {
     for (const cents of [1, 99, 100, 155313, 658599, 123456789]) {
       expect(parseBRLToCents(formatCents(cents))).toBe(cents);
     }
   });
 });
 
-describe('maskMoneyDigits (máscara estilo banco)', () => {
+describe('maskMoneyDigits (bank-style mask)', () => {
   test.each([
     ['', ''],
     ['1', '0,01'],

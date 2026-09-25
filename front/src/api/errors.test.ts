@@ -1,7 +1,7 @@
 import { ApiError, errorMessage, type Problem } from './errors';
 
 describe('errorMessage', () => {
-  test('código conhecido tem mensagem própria', () => {
+  test('a known code has its own message', () => {
     const problem: Problem = {
       type: 'about:blank',
       title: 'Conflict',
@@ -14,7 +14,7 @@ describe('errorMessage', () => {
     );
   });
 
-  test('código fora do contrato cai na mensagem genérica, nunca vazia', () => {
+  test('a code outside the contract falls back to the generic message, never empty', () => {
     const problem = {
       type: 'about:blank',
       title: 'Teapot',
@@ -27,7 +27,7 @@ describe('errorMessage', () => {
     );
   });
 
-  test('erro que não é da API (rede) tem mensagem de conexão', () => {
+  test('a non-API error (network) gets the connection message', () => {
     expect(errorMessage(new TypeError('Failed to fetch'))).toMatch(/Não foi possível falar/);
   });
 });

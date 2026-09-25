@@ -26,7 +26,7 @@ export function parseBRLToCents(text: string): number | null {
 // 155313 → "1.553,13" (sem o símbolo; é o texto que aparece no campo).
 export function formatCentsPlain(cents: number): string {
   if (!Number.isSafeInteger(cents)) {
-    throw new Error(`valor em centavos inválido: ${cents}`);
+    throw new Error(`invalid cents value: ${cents}`);
   }
   const sign = cents < 0 ? '-' : '';
   const digits = String(Math.abs(cents)).padStart(3, '0');

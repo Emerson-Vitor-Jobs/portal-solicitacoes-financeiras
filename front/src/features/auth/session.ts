@@ -14,7 +14,7 @@ export const SessionContext = createContext<Me | null>(null);
 export function useSession(): Me {
   const session = useContext(SessionContext);
   if (session === null) {
-    throw new Error('useSession fora de <RequireAuth>');
+    throw new Error('useSession called outside <RequireAuth>');
   }
   return session;
 }

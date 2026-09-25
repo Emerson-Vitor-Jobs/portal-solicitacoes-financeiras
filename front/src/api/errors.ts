@@ -12,7 +12,7 @@ export class ApiError extends Error {
   readonly retryAfterSeconds: number | null;
 
   constructor(status: number, problem: Problem | null, retryAfterSeconds: number | null = null) {
-    super(problem?.detail ?? `Falha na requisição (HTTP ${status})`);
+    super(problem?.detail ?? `Request failed (HTTP ${status})`);
     this.name = 'ApiError';
     this.status = status;
     this.problem = problem;

@@ -12,17 +12,17 @@ function lastListParams(): Record<string, string> {
     (r) => r.method === 'GET' && r.url.pathname === '/api/requests',
   );
   const last = calls.at(-1);
-  if (!last) throw new Error('nenhuma chamada ao GET /api/requests');
+  if (!last) throw new Error('no GET /api/requests call was made');
   return Object.fromEntries(last.url.searchParams);
 }
 
 describe('RequestListPage', () => {
-  test('mostra as colunas e o selo "Vencida" vindo do is_overdue da API', async () => {
+  test('shows the columns and the "Vencida" badge from the API is_overdue', async () => {
     loginAs(FINANCE_EMAIL);
     renderApp('/requests');
 
     const row = (await screen.findByText('NF-2026-1001')).closest('tr');
-    if (!row) throw new Error('linha não encontrada');
+    if (!row) throw new Error('row not found');
     const cells = within(row);
     expect(cells.getByRole('link', { name: 'Aurora Serviços Digitais' })).toBeInTheDocument();
     expect(cells.getByText('R$ 1.250,00')).toBeInTheDocument();
@@ -34,7 +34,7 @@ describe('RequestListPage', () => {
     expect(screen.getAllByText('Vencida')).toHaveLength(4);
   });
 
-  test('mudar o status chama a API com o filtro e volta para a página 1', async () => {
+  test('changing the status calls the API with the filter and goes back to page 1', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     const { router } = renderApp('/requests?page=2&supplier=a');
@@ -55,7 +55,7 @@ describe('RequestListPage', () => {
     expect(await screen.findByText('4 solicitações')).toBeInTheDocument();
   });
 
-  test('a busca por fornecedor vai para a API depois do debounce', async () => {
+  test('the supplier search reaches the API after the debounce', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     const { router } = renderApp('/requests');
@@ -70,7 +70,7 @@ describe('RequestListPage', () => {
     expect(router.state.location.search).toBe('?supplier=aurora');
   });
 
-  test('"Limpar filtros" cancela a busca pendente e limpa o campo do fornecedor', async () => {
+  test('"Limpar filtros" cancels the pending search and clears the supplier field', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     const { router } = renderApp('/requests?status=PENDING');
@@ -86,7 +86,7 @@ describe('RequestListPage', () => {
     expect(state.requestLog.some((r) => r.url.searchParams.has('supplier'))).toBe(false);
   });
 
-  test('o campo do fornecedor acompanha a URL quando ela muda por outro caminho', async () => {
+  test('the supplier field follows the URL when it changes some other way', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     const { router } = renderApp('/requests?supplier=norte');
@@ -105,7 +105,7 @@ describe('RequestListPage', () => {
     expect(router.state.location.search).toBe('');
   });
 
-  test('digitar o vencimento em dd/mm/aaaa envia YYYY-MM-DD, sem conversão de fuso', async () => {
+  test('typing the due date as dd/mm/yyyy sends YYYY-MM-DD, without time zone conversion', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     const { router } = renderApp('/requests');
@@ -118,7 +118,7 @@ describe('RequestListPage', () => {
     expect(router.state.location.search).toBe('?due_from=2026-09-18');
   });
 
-  test('filtros e página vindos da URL (F5, voltar) vão para a API e aparecem nos campos', async () => {
+  test('filters and page from the URL (reload, back) reach the API and show in the fields', async () => {
     loginAs(FINANCE_EMAIL);
     renderApp('/requests?status=PENDING&due_from=2026-09-01&due_to=2026-09-30&supplier=norte');
 
@@ -137,11 +137,11 @@ describe('RequestListPage', () => {
     expect(screen.getByLabelText('Vencimento até')).toHaveValue('30/09/2026');
   });
 
-  test('paginação usa o total_pages da API e a página vai para a URL', async () => {
+  test('pagination uses the API total_pages and the page goes to the URL', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     const [item] = REQUESTS;
-    if (!item) throw new Error('fixture vazia');
+    if (!item) throw new Error('empty fixture');
     server.use(
       http.get('*/api/requests', ({ request }) => {
         const page = Number(new URL(request.url).searchParams.get('page'));
@@ -164,7 +164,7 @@ describe('RequestListPage', () => {
     expect(router.state.location.search).toBe('?page=2');
   });
 
-  test('página além da última mostra o vazio com atalho para a primeira', async () => {
+  test('a page past the last one shows the empty state with a shortcut to the first', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     const { router } = renderApp('/requests?page=9');
@@ -176,7 +176,7 @@ describe('RequestListPage', () => {
     expect(router.state.location.search).toBe('');
   });
 
-  test('estado vazio e estado de erro', async () => {
+  test('empty state and error state', async () => {
     loginAs(REQUESTER_EMAIL);
     const { router } = renderApp('/requests?supplier=inexistente');
     expect(await screen.findByText('Nenhuma solicitação encontrada')).toBeInTheDocument();

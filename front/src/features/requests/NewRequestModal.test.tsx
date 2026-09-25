@@ -32,7 +32,7 @@ async function fillValidForm(user: UserEvent, invoice = 'NF-2026-9001') {
 }
 
 describe('#10 NewRequestModal', () => {
-  test('#10 envia o corpo do contrato: centavos, CNPJ sem máscara, datas em string', async () => {
+  test('#10 sends the contract body: cents, unmasked CNPJ, string dates', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
     const { router } = renderApp('/requests/new');
@@ -56,7 +56,7 @@ describe('#10 NewRequestModal', () => {
     expect(await screen.findByText('Solicitação criada.')).toBeInTheDocument();
   });
 
-  test('#10 anti-duplo-envio: dois cliques rápidos = 1 POST, botão travado enquanto envia', async () => {
+  test('#10 double-submit guard: two quick clicks = 1 POST, button locked while sending', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
     // Segura a resposta do POST até o teste liberar, para ver o botão durante o envio.
@@ -84,7 +84,7 @@ describe('#10 NewRequestModal', () => {
     expect(postsToRequests()).toHaveLength(1);
   });
 
-  test('#10 um 409 DUPLICATE_INVOICE mostra a mensagem no campo da nota', async () => {
+  test('#10 a 409 DUPLICATE_INVOICE shows the message on the invoice field', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
     renderApp('/requests/new');
@@ -107,7 +107,7 @@ describe('#10 NewRequestModal', () => {
     expect(screen.getByRole('button', { name: 'Enviar solicitação' })).toBeEnabled();
   });
 
-  test('422 com errors[] aponta cada erro no campo certo (amount_cents → Valor)', async () => {
+  test('422 with errors[] points each error to the right field (amount_cents → Valor)', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
     server.use(
@@ -131,7 +131,7 @@ describe('#10 NewRequestModal', () => {
     );
   });
 
-  test('valida a forma antes de enviar (nada vai para a API)', async () => {
+  test('validates the shape before sending (nothing reaches the API)', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
     renderApp('/requests/new');
@@ -149,7 +149,7 @@ describe('#10 NewRequestModal', () => {
     expect(postsToRequests()).toHaveLength(0);
   });
 
-  test('FINANCE não vê o formulário', async () => {
+  test('FINANCE does not see the form', async () => {
     loginAs(FINANCE_EMAIL);
     renderApp('/requests/new');
 

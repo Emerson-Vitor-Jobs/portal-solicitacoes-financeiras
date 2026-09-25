@@ -6,7 +6,7 @@ import type { components, paths } from './schema';
 type Detail = components['schemas']['RequestDetail'];
 type Problem = components['schemas']['Problem'];
 
-test('contrato gerado a partir do openapi.json do back', () => {
+test('contract generated from the back-end openapi.json', () => {
   expectTypeOf<Detail['amount_cents']>().toEqualTypeOf<number>();
   expectTypeOf<Detail['due_date']>().toEqualTypeOf<string>();
   expectTypeOf<Detail['paid_at']>().toEqualTypeOf<string | null>();

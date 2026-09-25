@@ -6,8 +6,8 @@ import { ApiError } from './errors';
 
 afterEach(() => setUnauthenticatedListener(null));
 
-describe('client da API: tratamento do 401', () => {
-  test('401 UNAUTHENTICATED em qualquer rota avisa o listener e lança ApiError', async () => {
+describe('API client: 401 handling', () => {
+  test('401 UNAUTHENTICATED on any route notifies the listener and throws ApiError', async () => {
     const listener = vi.fn();
     setUnauthenticatedListener(listener);
     server.use(http.get('*/api/dashboard/summary', () => problem(401, 'UNAUTHENTICATED', 'x')));
@@ -19,7 +19,7 @@ describe('client da API: tratamento do 401', () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  test('401 INVALID_CREDENTIALS do login não é sessão expirada', async () => {
+  test('401 INVALID_CREDENTIALS from login is not an expired session', async () => {
     const listener = vi.fn();
     setUnauthenticatedListener(listener);
 
@@ -31,7 +31,7 @@ describe('client da API: tratamento do 401', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  test('erro sem corpo Problem (ex.: 502 do proxy) vira ApiError sem código', async () => {
+  test('an error without a Problem body (e.g. proxy 502) becomes an ApiError without code', async () => {
     server.use(http.get('*/api/auth/me', () => new Response('<html>502</html>', { status: 502 })));
 
     const error = await unwrap(api.GET('/api/auth/me')).catch((e: unknown) => e);
@@ -41,7 +41,7 @@ describe('client da API: tratamento do 401', () => {
     expect((error as ApiError).code).toBeNull();
   });
 
-  test('todo POST leva o header anti-CSRF; GET não precisa', async () => {
+  test('every POST carries the anti-CSRF header; GET does not need it', async () => {
     const seen: Record<string, string | null> = {};
     server.use(
       http.post('*/api/auth/logout', ({ request }) => {

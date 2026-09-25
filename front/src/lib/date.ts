@@ -109,7 +109,7 @@ function saoPauloParts(instant: Date): Parts {
   }
   const { year, month, day, hour, minute, second } = parts;
   if (!year || !month || !day || !hour || !minute || !second) {
-    throw new Error('Intl não devolveu as partes da data');
+    throw new Error('Intl did not return the date parts');
   }
   return { year, month, day, hour, minute, second };
 }
@@ -157,7 +157,7 @@ export function toSaoPauloRfc3339(date: string, time: string): string {
   const d = BUSINESS_DATE.exec(date);
   const t = TIME.exec(time);
   if (!d || !t || !isBusinessDate(date)) {
-    throw new Error(`data ou hora inválida: ${date} ${time}`);
+    throw new Error(`invalid date or time: ${date} ${time}`);
   }
   const wallClockAsUtc = Date.UTC(
     Number(d[1]),

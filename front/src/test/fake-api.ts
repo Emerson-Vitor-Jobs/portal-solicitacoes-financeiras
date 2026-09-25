@@ -60,7 +60,7 @@ export function resetFakeApi(): void {
 
 export function loginAs(email: string): User {
   const user = USERS.find((u) => u.email === email);
-  if (!user) throw new Error(`usuário de fixture inexistente: ${email}`);
+  if (!user) throw new Error(`unknown fixture user: ${email}`);
   state.currentUser = user;
   return user;
 }
@@ -167,7 +167,7 @@ export const handlers = [
     const user = state.currentUser;
     if (!user) return unauthenticated();
     const numbers = DASHBOARDS[user.id];
-    if (!numbers) throw new Error(`sem dashboard de fixture para ${user.id}`);
+    if (!numbers) throw new Error(`no fixture dashboard for ${user.id}`);
     return json<Schemas['DashboardSummary']>({ ...numbers, reference_date: REFERENCE_DATE });
   }),
 

@@ -13,7 +13,7 @@ async function fillAndSubmit(email: string, password: string) {
 }
 
 describe('LoginPage', () => {
-  test('credencial inválida mostra mensagem sem dizer qual campo errou', async () => {
+  test('invalid credentials show a message without saying which field was wrong', async () => {
     renderApp('/login');
 
     await fillAndSubmit('solicitante@gex.test', 'senha-errada');
@@ -21,7 +21,7 @@ describe('LoginPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('E-mail ou senha inválidos.');
   });
 
-  test('TOO_MANY_REQUESTS mostra o tempo do Retry-After', async () => {
+  test('TOO_MANY_REQUESTS shows the Retry-After wait time', async () => {
     server.use(
       http.post('*/api/auth/login', () =>
         problem(429, 'TOO_MANY_REQUESTS', 'Muitas tentativas.', {
@@ -38,7 +38,7 @@ describe('LoginPage', () => {
     );
   });
 
-  test('campos vazios são validados antes de chamar a API', async () => {
+  test('empty fields are validated before calling the API', async () => {
     const user = userEvent.setup();
     renderApp('/login');
 
@@ -48,7 +48,7 @@ describe('LoginPage', () => {
     expect(screen.getByText('Informe a senha.')).toBeInTheDocument();
   });
 
-  test('login válido leva à página que a pessoa tentou abrir', async () => {
+  test('a valid login goes to the page the user tried to open', async () => {
     const { router } = renderApp('/requests');
 
     await fillAndSubmit('financeiro@gex.test', 'GexFinance123!');
