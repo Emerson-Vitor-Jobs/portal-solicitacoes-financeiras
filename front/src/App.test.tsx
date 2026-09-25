@@ -33,6 +33,7 @@ describe('rotas protegidas e sessão', () => {
     renderApp('/');
 
     expect(await screen.findByText('Fernanda Financeiro')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir menu' }));
     expect(screen.getByRole('link', { name: 'Solicitações' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Nova solicitação' })).not.toBeInTheDocument();
   });

@@ -163,42 +163,6 @@ export function AppLayout() {
               <Title order={1} size="h4" lh={1.2} style={{ whiteSpace: 'nowrap' }}>
                 Portal Financeiro
               </Title>
-              <Group
-                gap={6}
-                wrap="nowrap"
-                ml="lg"
-                visibleFrom="sm"
-                component="nav"
-                aria-label="Menu principal"
-              >
-                {menu.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    component={RouterNavLink}
-                    to={item.to}
-                    end={item.end}
-                    label={item.label}
-                    leftSection={item.icon}
-                    className={classes.navlink}
-                    w="auto"
-                  />
-                ))}
-                {user.role === 'REQUESTER' && (
-                  <Button
-                    component={Link}
-                    to="/requests/new"
-                    size="sm"
-                    leftSection={<IconPlus size={16} />}
-                    style={{
-                      border: brutal.border,
-                      boxShadow: brutal.shadowSmall,
-                      borderRadius: 10,
-                    }}
-                  >
-                    Nova solicitação
-                  </Button>
-                )}
-              </Group>
             </Group>
             <Group wrap="nowrap" gap="sm">
               <UserAvatar id={user.id} name={user.name} size={36} />
