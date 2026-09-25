@@ -832,6 +832,7 @@ persiste), que é o que se procura ao ler e ao avaliar. As portas vivem junto do
 | **Layered Architecture** (controller → service → repository) | a estrutura de pastas | Cada camada tem uma responsabilidade só: gatilho, regra, persistência |
 | **Composition Root** + injeção manual (Seemann) | `main.ts` | Todo o grafo de dependências visível num lugar, sem container de DI nem mágica |
 | **Repository** (Fowler) | `*_storage.ts` | O service pede "dados de negócio", não escreve SQL |
+| **Unit of Work** (Fowler), pela porta `inTransaction(fn)` | `RequestRepository.inTransaction` | O service decide *o que* é atômico (UPDATE + auditoria); o adaptador decide *como* (BEGIN/COMMIT/ROLLBACK). A atomicidade fica na regra sem o service importar o banco |
 | **Transaction Script** (Fowler) | cada caso de uso do service | O domínio é um fluxo com poucas regras. Um Domain Model rico (DDD, agregados) seria exagero pra esse escopo |
 | **Data Mapper** / **DTO** (Fowler) | `mapX()` (linha → domínio) / `toXResponse()` (domínio → JSON) | Isola o formato do banco e o contrato público do domínio (§3) |
 | **Máquina de estados por tabela de transições** | transições de status | Uma tabela com as transições permitidas é a regra inteira num lugar só. O State pattern (GoF), com uma classe por estado, seria peso sem ganho com 4 estados |
