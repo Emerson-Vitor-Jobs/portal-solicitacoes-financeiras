@@ -3,6 +3,14 @@
 Uma pessoa solicitante cadastra uma despesa; o financeiro aprova ou rejeita e registra o pagamento.
 TypeScript de ponta a ponta: **React** (Vite + Mantine) no front, **Node** (Fastify) na API, **PostgreSQL** no banco.
 
+| Documento | Para quê |
+| --- | --- |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | como o sistema é montado: camadas, concorrência, modelo de dados, fuso, front (com diagramas) |
+| [`SECURITY.md`](SECURITY.md) | controles de segurança, headers, política de log e limitações conhecidas |
+| [`docs/TESTING.md`](docs/TESTING.md) | estratégia de testes e onde está cada teste obrigatório do enunciado |
+| [`docs/API.md`](docs/API.md) | convenções da API e um passeio com `curl` pelo fluxo completo |
+| [`docs/decisoes/`](docs/decisoes/) | as 17 decisões de arquitetura, com alternativas, motivos e fontes |
+
 ## Rodar
 
 ```bash
@@ -42,12 +50,15 @@ docker compose --profile test run --rm back-test    # API: unitários + integra�
 docker compose --profile test run --rm front-test   # front: lógica e componentes
 ```
 
+**280 testes** (148 no back, 132 no front). Com `make` instalado: `make test` roda os dois (o `Makefile` só tem
+atalhos pra esses mesmos comandos; também há `make up` e `make reset`).
+
 O `back-test` usa um banco próprio (`gex_finance_it`) e nunca toca nos dados do app. Localmente, sem Docker:
 `npm test` em `front/`; em `back/`, `npm run test:unit` e `npm run test:integration` (este precisa do Postgres do
 compose no ar).
 
 Os testes obrigatórios do enunciado estão marcados com o número no nome (ex.: `#3 duas criações duplicadas
-simultâneas`). O mapa completo está em [`docs/decisoes/DECISOES_FUNDACAO.md` §9.5](docs/decisoes/DECISOES_FUNDACAO.md).
+simultâneas`). O mapa completo está em [`docs/TESTING.md`](docs/TESTING.md).
 
 ## Como as regras críticas são garantidas
 
@@ -59,6 +70,7 @@ simultâneas`). O mapa completo está em [`docs/decisoes/DECISOES_FUNDACAO.md` �
 | Histórico imutável | trigger no banco bloqueia `UPDATE`/`DELETE` em `audit_events` |
 | Datas sem deslocamento de fuso | `DATE` trafega como texto `YYYY-MM-DD`; o "hoje" vem do servidor (`APP_TODAY` ou São Paulo) e o front não calcula vencimento |
 | Autorização no backend | sessão opaca no Postgres (cookie `HttpOnly`, `SameSite=Strict`), papel lido do banco a cada requisição, header anti-CSRF, rate limit no login |
+| Headers de segurança | CSP restrita à própria origem, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Cache-Control: no-store` na API |
 | Nada sensível em log | log com campos fixos; erro de banco reduzido a `{ name, code }` |
 
 As decisões, com o motivo e as fontes de cada uma, estão em [`docs/decisoes/`](docs/decisoes/).
@@ -83,8 +95,12 @@ data/     dados do desafio (montados só para leitura no seed)
 docs/     decisões de arquitetura
 ```
 
-## Créditos
+## Licença e créditos
 
-- Sistema visual inspirado em [EasyPay: E-Wallet Digital Payment App](https://www.figma.com/community/file/1146678238901785717/easypay-e-wallet-digital-payment-app),
+Código sob a licença [MIT](LICENSE). Material de terceiros:
+
+- Sistema visual (paleta e tipografia) inspirado em [EasyPay: E-Wallet Digital Payment App](https://www.figma.com/community/file/1146678238901785717/easypay-e-wallet-digital-payment-app),
   de Nickelfox (Figma Community, CC BY 4.0).
 - Ilustrações [Open Doodles](https://www.opendoodles.com), de Pablo Stanley (CC0).
+- Fontes IBM Plex Sans e Roboto (SIL Open Font License 1.1).
+- `data/`: dados do desafio, reproduzidos sem alteração.

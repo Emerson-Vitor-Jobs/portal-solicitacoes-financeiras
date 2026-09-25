@@ -10,7 +10,6 @@ Registro das decisões iniciais, uma por vez, com o motivo. (Executar só depois
     formulário (texto `"1.553,13"`) e o da API (`amount_cents` inteiro) são diferentes de propósito.
 - **1b. `data/` na raiz, idêntico ao pacote recebido**, montado read-only na API (`./data:/app/data:ro`).
   - Motivo: fonte única, o avaliador reconhece e pode comparar, e o mount garante a imutabilidade.
-  - A cópia em `documentos/desafio_tecnico/data` será removida na E0.
 - **1c. Entrega:** as decisões e pesquisas vão pro repositório em `docs/decisoes/`. O enunciado e as notas de
   planejamento ficam fora (`documentos/`, no `.gitignore`).
 
@@ -594,7 +593,7 @@ RETURNING *;
 - **Precisa do banco de pé pra gerar.** Mitigação: um script só (`gen:sql`), e o código gerado fica commitado.
 - **Diferença de sintaxe em relação ao sqlc:** `/* @name X */` + `:param` no lugar de `-- name: X :one` + `$1`.
 
-**Verificação (E0d) — APROVADA.** Feita num banco descartável, com as 4 queries representativas, em tempo de execução:
+**Verificação — APROVADA.** Feita num banco descartável, com as 4 queries representativas, em tempo de execução:
 | Critério | Resultado |
 | --- | --- |
 | Filtro opcional com parâmetro nulo (`:status::text IS NULL OR status = :status`) | Tipado como `string \| null \| void`; `null` = sem filtro |
@@ -639,7 +638,7 @@ imagem.
 **Observação:** a máquina de desenvolvimento tem o Node 26.9.0. Os testes oficiais rodam no container
 (`--profile test`), que é o que vale. Localmente, o `engines` só avisa.
 
-## 14. Fechamento pré-E0: dinheiro, tempo, front, ferramental, logs e rate limit — FECHADA
+## 14. Dinheiro, tempo, front, ferramental, logs e rate limit — FECHADA
 
 Revisada contra os dados do desafio. Uma primeira versão propunha "máscara estilo banco" como o próprio parser. Isso quebrava o oráculo oficial
 (`"10"` → 1000), foi corrigido e a revisão concordou.
@@ -666,7 +665,7 @@ Revisada contra os dados do desafio. Uma primeira versão propunha "máscara est
   - colar (`"10"`, `"R$ 2.000,00"`) → `parseBRLToCents` → 1000 / 200000
 - **Por quê:** o contrato fica previsível (um formato só, um parser só, testado contra o oráculo oficial). A máscara
   elimina a ambiguidade na digitação sem mudar o significado do texto colado.
-- A **biblioteca** da máscara (react-imask, outra ou um componente próprio) é detalhe de implementação da E6. A
+- A **biblioteca** da máscara (react-imask, outra ou um componente próprio) é detalhe de implementação do front. A
   decisão que importa é o comportamento acima.
 
 ### 14.2 Tempo: o servidor é a autoridade
@@ -682,7 +681,7 @@ Revisada contra os dados do desafio. Uma primeira versão propunha "máscara est
 
 ### 14.3 Front: fechado
 React Router · Mantine com datas em string `YYYY-MM-DD` (o `DateInput` trabalha com `string | null` desde a v8; versão final na §15) ·
-biblioteca de máscara decidida na E6 (não bloqueia).
+biblioteca de máscara como detalhe de implementação: o `MaskInput` do próprio Mantine (CNPJ) e um componente próprio (valor).
 
 ### 14.4 Ferramental: fechado
 npm (já instalado, sem motivo pra trocar) · Prettier (o `gofmt` do TS) · ESLint + `typescript-eslint` com
@@ -699,7 +698,7 @@ npm (já instalado, sem motivo pra trocar) · Prettier (o `gofmt` do TS) · ESLi
 - **Por quê:** "não logar body" sozinho não garante a política, porque o dado vaza pelo erro. Com uma lista explícita
   a regra fica testável: um teste provoca um `23505` e verifica que o log não contém o CNPJ.
 
-### 14.6 Rate limit no login: obrigação de segurança (E3)
+### 14.6 Rate limit no login: obrigação de segurança
 - `@fastify/rate-limit` **≥ 11.2.0** (as versões anteriores têm bypass por rotação de IPv6,
   [GHSA-grpc-p53c-r64v](https://github.com/fastify/fastify-rate-limit/security/advisories/GHSA-grpc-p53c-r64v)).
   Hoje a última é a 11.2.0 (29/07/2026).
@@ -781,7 +780,7 @@ Levantadas em 25/09/2026 no registro do npm, com os `peerDependencies` de cada p
    As quebras da v9 (variáveis de CSS do variant `light`, `gutter` → `gap` no `Grid`, React ≥ 19.2) não afetam um
    projeto que começa do zero.
 3. Começar um projeto novo na major anterior seria dívida desde o primeiro dia.
-4. **Verificação na E0b:** conferir pelos tipos instalados que o `DateInput` da v9 recebe `string | null`.
+4. **Verificado** nos tipos instalados: o `DateInput` da v9 recebe `string | null`.
 
 Fontes: registro do npm (`registry.npmjs.org`, `peerDependencies` de cada pacote);
 [typescript-eslint #12518: TypeScript 7.0.2 Support](https://github.com/typescript-eslint/typescript-eslint/issues/12518);

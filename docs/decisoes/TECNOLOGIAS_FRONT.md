@@ -11,6 +11,6 @@
 ## Pontos antes pendentes (fechados em `DECISOES_FUNDACAO.md` §14)
 - **Rotas:** React Router.
 - **Valor em reais:** `parseBRLToCents` (gramática BR estrita, oráculo oficial) + máscara estilo banco na digitação.
-  Nada de `NumberInput` (float). Biblioteca da máscara decidida na E6.
-- **CNPJ:** máscara alfanumérica (§11). Biblioteca decidida na E6.
+  Nada de `NumberInput` (float). Máscara: componente próprio (valor, estilo banco).
+- **CNPJ:** máscara alfanumérica (§11). Máscara: `MaskInput` do Mantine.
 - **Datas:** Mantine 9 (§15) com strings `YYYY-MM-DD`. `is_overdue` e `reference_date` vêm da API (§14.2).
