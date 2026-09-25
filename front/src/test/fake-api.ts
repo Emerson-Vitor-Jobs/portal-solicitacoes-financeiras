@@ -235,4 +235,65 @@ export const handlers = [
     await delay(20);
     return HttpResponse.json(created, { status: 201, headers: { Location: `/requests/${id}` } });
   }),
+
+  http.post('*/api/requests/:id/decision', async ({ request, params }) => {
+    const user = state.currentUser;
+    if (!user) return unauthenticated();
+    if (user.role !== 'FINANCE') return problem(403, 'FORBIDDEN', 'Só o financeiro decide.');
+    const found = state.requests.find((r) => r.id === params.id);
+    if (!found) return problem(404, 'NOT_FOUND', 'Solicitação não encontrada.');
+    const body = (await request.json()) as { decision: 'APPROVE' | 'REJECT'; reason?: string };
+    if (body.decision === 'REJECT' && !body.reason?.trim()) {
+      return problem(422, 'VALIDATION_FAILED', 'Dados inválidos.', {
+        errors: [{ field: 'reason', message: 'Informe o motivo da rejeição.' }],
+      });
+    }
+    if (found.status !== 'PENDING') {
+      return problem(409, 'INVALID_TRANSITION', `A solicitação está ${found.status}.`);
+    }
+    const next = body.decision === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+    transition(found, user, next, body.decision === 'REJECT' ? (body.reason ?? null) : null);
+    if (next === 'REJECTED') {
+      found.rejection_reason = body.reason ?? null;
+      found.is_overdue = false;
+    }
+    return json<RequestDetail>(found);
+  }),
+
+  http.post('*/api/requests/:id/mark-paid', async ({ request, params }) => {
+    const user = state.currentUser;
+    if (!user) return unauthenticated();
+    if (user.role !== 'FINANCE') return problem(403, 'FORBIDDEN', 'Só o financeiro paga.');
+    const found = state.requests.find((r) => r.id === params.id);
+    if (!found) return problem(404, 'NOT_FOUND', 'Solicitação não encontrada.');
+    const body = (await request.json()) as { paid_at: string; payment_reference: string };
+    if (found.status !== 'APPROVED') {
+      return problem(409, 'INVALID_TRANSITION', `A solicitação está ${found.status}.`);
+    }
+    transition(found, user, 'PAID', null);
+    found.paid_at = body.paid_at;
+    found.payment_reference = body.payment_reference;
+    found.is_overdue = false;
+    return json<RequestDetail>(found);
+  }),
 ];
+
+const EVENT_INSTANT = '2026-09-18T11:00:00-03:00';
+
+function transition(
+  request: RequestDetail,
+  actor: User,
+  next: Schemas['RequestStatus'],
+  reason: string | null,
+): void {
+  request.history.push({
+    id: `30000000-0000-4000-9000-${String(request.history.length + 100).padStart(12, '0')}`,
+    previous_status: request.status,
+    new_status: next,
+    actor: { id: actor.id, name: actor.name },
+    reason,
+    created_at: EVENT_INSTANT,
+  });
+  request.status = next;
+  request.updated_at = EVENT_INSTANT;
+}

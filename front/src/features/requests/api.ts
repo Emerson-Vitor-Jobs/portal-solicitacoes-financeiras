@@ -16,6 +16,7 @@ export type MarkPaidBody =
 // Chaves do cache: invalidar ['requests'] derruba lista e detalhes de uma vez.
 export const requestKeys = {
   all: ['requests'] as const,
+  lists: ['requests', 'list'] as const,
   list: (query: ListQuery) => ['requests', 'list', query] as const,
   detail: (id: string) => ['requests', 'detail', id] as const,
 };

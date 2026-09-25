@@ -52,6 +52,17 @@ describe('#10 NewRequestPage', () => {
   test('#10 anti-duplo-envio: dois cliques rápidos = 1 POST, botão travado enquanto envia', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
+    // Segura a resposta do POST até o teste liberar, para ver o botão durante o envio.
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post('*/api/requests', async () => {
+        await gate;
+        return undefined; // segue para o handler padrão do fake
+      }),
+    );
     renderApp('/requests/new');
     await fillValidForm(user);
     const button = screen.getByRole('button', { name: 'Enviar solicitação' });
@@ -60,7 +71,9 @@ describe('#10 NewRequestPage', () => {
     await user.click(button);
 
     await waitFor(() => expect(button).toBeDisabled());
-    await waitFor(() => expect(screen.queryByText('Solicitação criada.')).toBeInTheDocument());
+    expect(button).toHaveAttribute('data-loading', 'true');
+    release();
+    expect(await screen.findByText('Solicitação criada.')).toBeInTheDocument();
     expect(postsToRequests()).toHaveLength(1);
   });
 
