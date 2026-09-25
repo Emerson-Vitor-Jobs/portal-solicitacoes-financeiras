@@ -1,8 +1,8 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
-import { server } from '../../../test/msw';
-import { renderApp } from '../../../test/render';
+import { server } from '../../test/msw';
+import { renderApp } from '../../test/render';
 import { problem } from '../../test/fake-api';
 
 async function fillAndSubmit(email: string, password: string) {

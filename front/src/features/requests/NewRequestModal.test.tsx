@@ -1,9 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { http } from 'msw';
-import { server } from '../../../test/msw';
-import { renderApp } from '../../../test/render';
-import { loginAs, problem, REQUESTER_EMAIL, state } from '../../test/fake-api';
+import { server } from '../../test/msw';
+import { renderApp } from '../../test/render';
+import { FINANCE_EMAIL, loginAs, problem, REQUESTER_EMAIL, state } from '../../test/fake-api';
 
 // Os campos são procurados DENTRO do modal: a lista aberta atrás dele também tem campos "Fornecedor" e
 // "Vencimento" (os filtros).
@@ -150,7 +150,7 @@ describe('#10 NewRequestModal', () => {
   });
 
   test('FINANCE não vê o formulário', async () => {
-    loginAs('financeiro@gex.test');
+    loginAs(FINANCE_EMAIL);
     renderApp('/requests/new');
 
     expect(await screen.findByText('Acesso restrito')).toBeInTheDocument();

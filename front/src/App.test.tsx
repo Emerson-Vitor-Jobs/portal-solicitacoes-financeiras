@@ -1,9 +1,9 @@
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
-import { server } from '../test/msw';
+import { server } from './test/msw';
 import { sessionQueryKey } from './features/auth/api';
-import { renderApp } from '../test/render';
+import { renderApp } from './test/render';
 import { FINANCE_EMAIL, loginAs, problem, REQUESTER_EMAIL, state } from './test/fake-api';
 
 describe('rotas protegidas e sessão', () => {

@@ -1,4 +1,5 @@
 import { delay, http, HttpResponse, type JsonBodyType } from 'msw';
+import { CSRF_HEADER, CSRF_HEADER_VALUE } from '../api/client';
 import type { components } from '../api/schema';
 import { DASHBOARDS, REFERENCE_DATE, REQUESTS, SEED_PASSWORDS, USERS } from './fixtures';
 
@@ -46,7 +47,7 @@ function json<T extends JsonBodyType>(body: T, status = 200) {
 type FakeState = {
   currentUser: User | null;
   requests: RequestDetail[];
-  requestLog: { method: string; url: URL; body: unknown; headers: Headers }[];
+  requestLog: { method: string; url: URL; body: unknown }[];
 };
 
 export const state: FakeState = { currentUser: null, requests: [], requestLog: [] };
@@ -76,7 +77,10 @@ function visibleTo(user: User, request: RequestDetail): boolean {
 }
 
 function withoutAccents(text: string): string {
-  return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
 function toListItem(r: RequestDetail): Schemas['RequestListItem'] {
@@ -99,14 +103,35 @@ async function log(request: Request): Promise<void> {
     method: request.method,
     url: new URL(request.url),
     body,
-    headers: request.headers,
   });
 }
 
 // Todo POST sem o header anti-CSRF recebe 403, como no back (§8.3).
 function missingCsrf(request: Request): boolean {
-  return request.headers.get('X-Requested-With') !== 'gex-web';
+  return request.headers.get(CSRF_HEADER) !== CSRF_HEADER_VALUE;
 }
+
+const EVENT_INSTANT = '2026-09-18T11:00:00-03:00';
+
+function transition(
+  request: RequestDetail,
+  actor: User,
+  next: Schemas['RequestStatus'],
+  reason: string | null,
+): void {
+  request.history.push({
+    id: `30000000-0000-4000-9000-${String(request.history.length + 100).padStart(12, '0')}`,
+    previous_status: request.status,
+    new_status: next,
+    actor: { id: actor.id, name: actor.name },
+    reason,
+    created_at: EVENT_INSTANT,
+  });
+  request.status = next;
+  request.updated_at = EVENT_INSTANT;
+}
+
+const CREATE_RESPONSE_DELAY_MS = 20;
 
 export const handlers = [
   http.all('*/api/*', async ({ request }) => {
@@ -232,7 +257,7 @@ export const handlers = [
       ],
     };
     state.requests.push(created);
-    await delay(20);
+    await delay(CREATE_RESPONSE_DELAY_MS);
     return HttpResponse.json(created, { status: 201, headers: { Location: `/requests/${id}` } });
   }),
 
@@ -277,23 +302,3 @@ export const handlers = [
     return json<RequestDetail>(found);
   }),
 ];
-
-const EVENT_INSTANT = '2026-09-18T11:00:00-03:00';
-
-function transition(
-  request: RequestDetail,
-  actor: User,
-  next: Schemas['RequestStatus'],
-  reason: string | null,
-): void {
-  request.history.push({
-    id: `30000000-0000-4000-9000-${String(request.history.length + 100).padStart(12, '0')}`,
-    previous_status: request.status,
-    new_status: next,
-    actor: { id: actor.id, name: actor.name },
-    reason,
-    created_at: EVENT_INSTANT,
-  });
-  request.status = next;
-  request.updated_at = EVENT_INSTANT;
-}

@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { http } from 'msw';
-import { server } from '../../../test/msw';
-import { renderApp } from '../../../test/render';
+import { server } from '../../test/msw';
+import { renderApp } from '../../test/render';
 import { FINANCE_EMAIL, loginAs, problem, REQUESTER_EMAIL } from '../../test/fake-api';
 
 async function indicator(label: string) {

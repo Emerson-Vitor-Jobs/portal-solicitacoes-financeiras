@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { render } from '../../test/render';
+import { render } from '../test/render';
 import { parseBRLToCents } from '../lib/money';
 import { MoneyInput } from './MoneyInput';
 

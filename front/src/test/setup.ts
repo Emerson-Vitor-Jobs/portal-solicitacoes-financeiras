@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest';
 import { configure } from '@testing-library/react';
 import { vi } from 'vitest';
-import { resetFakeApi } from '../src/test/fake-api';
+import { resetFakeApi } from './fake-api';
 import { server } from './msw';
 
 // A primeira renderização de uma tela com Mantine pode passar de 1 s em máquina carregada (ou no

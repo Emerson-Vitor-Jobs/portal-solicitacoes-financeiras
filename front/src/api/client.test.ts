@@ -1,7 +1,7 @@
 import { http } from 'msw';
-import { server } from '../../test/msw';
+import { server } from '../test/msw';
 import { problem } from '../test/fake-api';
-import { api, setUnauthenticatedListener, unwrap } from './client';
+import { api, CSRF_HEADER, CSRF_HEADER_VALUE, setUnauthenticatedListener, unwrap } from './client';
 import { ApiError } from './errors';
 
 afterEach(() => setUnauthenticatedListener(null));
@@ -45,11 +45,11 @@ describe('client da API: tratamento do 401', () => {
     const seen: Record<string, string | null> = {};
     server.use(
       http.post('*/api/auth/logout', ({ request }) => {
-        seen.post = request.headers.get('X-Requested-With');
+        seen.post = request.headers.get(CSRF_HEADER);
         return new Response(null, { status: 204 });
       }),
       http.get('*/api/auth/me', ({ request }) => {
-        seen.get = request.headers.get('X-Requested-With');
+        seen.get = request.headers.get(CSRF_HEADER);
         return problem(401, 'UNAUTHENTICATED', 'x');
       }),
     );
@@ -57,7 +57,7 @@ describe('client da API: tratamento do 401', () => {
     await unwrap(api.POST('/api/auth/logout'));
     await unwrap(api.GET('/api/auth/me')).catch((e: unknown) => e);
 
-    expect(seen.post).toBe('gex-web');
+    expect(seen.post).toBe(CSRF_HEADER_VALUE);
     expect(seen.get).toBeNull();
   });
 });
