@@ -111,6 +111,13 @@ describe('RequestDetailPage', () => {
     expect(screen.getByText('Motivo: Nota sem assinatura')).toBeInTheDocument();
   });
 
+  test('no histórico, o pagamento mostra a referência (não "motivo")', async () => {
+    loginAs(FINANCE_EMAIL);
+    renderApp(`/requests/${REQUEST_BY_STATUS.PAID}`);
+    expect(await screen.findByText(/^Referência: PAG-/)).toBeInTheDocument();
+    expect(screen.queryByText(/^Motivo: PAG-/)).not.toBeInTheDocument();
+  });
+
   test('aprovar: dois cliques rápidos = 1 POST', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);

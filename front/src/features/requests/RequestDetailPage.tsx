@@ -99,7 +99,12 @@ function History({ request }: { request: RequestDetail }) {
           <Text size="sm" c="dimmed">
             {event.actor.name} · {formatInstant(event.created_at)}
           </Text>
-          {event.reason !== null && <Text size="sm">Motivo: {event.reason}</Text>}
+          {event.reason !== null && (
+            // No pagamento, o `reason` do evento é a referência do pagamento (como nos eventos do seed).
+            <Text size="sm">
+              {event.new_status === 'PAID' ? 'Referência' : 'Motivo'}: {event.reason}
+            </Text>
+          )}
         </Timeline.Item>
       ))}
     </Timeline>
