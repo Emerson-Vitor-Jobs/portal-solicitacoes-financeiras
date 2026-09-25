@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { STATUSES } from '../types/common.js';
 import {
+  businessDateOf,
   endOfDaySaoPaulo,
   isBusinessDate,
   isOverdue,
@@ -59,6 +60,22 @@ describe('#12 bordas de data', () => {
     expect(startOfDaySaoPaulo('2026-09-18').toISOString()).toBe('2026-09-18T03:00:00.000Z');
     expect(endOfDaySaoPaulo('2026-09-18').toISOString()).toBe('2026-09-19T03:00:00.000Z');
     expect(endOfDaySaoPaulo('2026-02-28').toISOString()).toBe('2026-03-01T03:00:00.000Z');
+  });
+
+  test('início do horário de verão (meia-noite que não existiu): o dia começa às 01:00 -02:00', () => {
+    const start = startOfDaySaoPaulo('2018-11-04');
+    expect(businessDateOf(start)).toBe('2018-11-04');
+    expect(start.toISOString()).toBe('2018-11-04T03:00:00.000Z');
+    // O instante anterior ainda é o dia 03.
+    expect(businessDateOf(new Date(start.getTime() - 1))).toBe('2018-11-03');
+    expect(endOfDaySaoPaulo('2018-11-03').getTime()).toBe(start.getTime());
+  });
+
+  test('fim do horário de verão (meia-noite repetida): começa na primeira 00:00, ainda em -02:00', () => {
+    // Em 2019-02-17 o relógio voltou de 00:00 (-02) para 23:00 do dia 16 (-03).
+    const start = startOfDaySaoPaulo('2019-02-17');
+    expect(businessDateOf(start)).toBe('2019-02-17');
+    expect(businessDateOf(new Date(start.getTime() - 1))).toBe('2019-02-16');
   });
 
   test('data de negócio precisa existir no calendário', () => {

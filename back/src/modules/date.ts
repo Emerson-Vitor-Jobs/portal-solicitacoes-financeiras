@@ -74,13 +74,16 @@ function offsetMinutes(instant: number): number {
   return match[1] === '-' ? -minutes : minutes;
 }
 
-// Instante da meia-noite de `date` em SP. A segunda passada corrige o caso de o deslocamento mudar no dia.
+// Primeiro instante de `date` em SP (normalmente a meia-noite). A segunda passada corrige o caso de o deslocamento
+// mudar perto da meia-noite. No início do horário de verão (ex.: 2018-11-04) a meia-noite não existiu: o relógio
+// pulou de 23:59:59 para 01:00. Aí a segunda passada cai no dia anterior, e o certo é o instante da primeira
+// (01:00 -02:00), que é o primeiro instante existente do dia.
 export function startOfDaySaoPaulo(date: string): Date {
   const [year, month, day] = parts(date);
   const midnightUtc = Date.UTC(year, month - 1, day);
-  let instant = midnightUtc - offsetMinutes(midnightUtc) * 60_000;
-  instant = midnightUtc - offsetMinutes(instant) * 60_000;
-  return new Date(instant);
+  const first = midnightUtc - offsetMinutes(midnightUtc) * 60_000;
+  const second = midnightUtc - offsetMinutes(first) * 60_000;
+  return new Date(businessDateOf(new Date(second)) === date ? second : first);
 }
 
 // Fim EXCLUSIVO do dia `date` em SP, ou seja, o início do dia seguinte (intervalo semiaberto, §6.0).
