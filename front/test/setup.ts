@@ -1,8 +1,13 @@
 // Setup recomendado pela documentação do Mantine para Vitest + jsdom.
 import '@testing-library/jest-dom/vitest';
+import { configure } from '@testing-library/react';
 import { vi } from 'vitest';
 import { resetFakeApi } from '../src/test/fake-api';
 import { server } from './msw';
+
+// A primeira renderização de uma tela com Mantine pode passar de 1 s em máquina carregada (ou no
+// container de teste); 1 s é o padrão do findBy/waitFor.
+configure({ asyncUtilTimeout: 5000 });
 
 const getComputedStyle = window.getComputedStyle.bind(window);
 window.getComputedStyle = (elt) => getComputedStyle(elt);
