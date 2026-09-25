@@ -11,6 +11,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./test/setup.ts'],
+    // Testes de tela com user-event digitando vários campos passam de 5 s em máquina carregada.
+    testTimeout: 20_000,
     include: ['src/**/*.test.{ts,tsx}', 'test/**/*.test.{ts,tsx}'],
     coverage: { provider: 'v8', include: ['src/**'], exclude: ['src/api/schema.d.ts'] },
   },
