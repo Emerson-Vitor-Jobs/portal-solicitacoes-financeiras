@@ -102,7 +102,11 @@ export function DashboardPage() {
     <Stack>
       <Title order={2}>Painel</Title>
       {summary.isPending && (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} aria-label="Carregando indicadores">
+        <SimpleGrid
+          cols={{ base: 1, sm: 2, lg: 4 }}
+          role="status"
+          aria-label="Carregando indicadores"
+        >
           {[1, 2, 3, 4].map((key) => (
             <Skeleton key={key} h={96} radius="md" />
           ))}

@@ -3,8 +3,7 @@ import { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router';
 import { setUnauthenticatedListener } from '../../api/client';
 import { sessionQueryKey } from './api';
-
-export type LoginLocationState = { expired?: boolean; from?: string };
+import type { LoginLocationState } from './login-state';
 
 // Raiz das rotas: liga o 401 UNAUTHENTICATED do client ao roteador. Se havia uma sessão carregada,
 // ela caiu no servidor: limpa o cache e manda pro /login com "Sua sessão expirou". Sem sessão

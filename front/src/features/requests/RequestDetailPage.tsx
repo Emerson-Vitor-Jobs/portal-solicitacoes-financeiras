@@ -43,7 +43,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function RequestData({ request }: { request: RequestDetail }) {
   return (
-    <Card withBorder radius="md" padding="lg">
+    <Card>
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} component="dl" m={0}>
         <Field label="Fornecedor">{request.supplier_name}</Field>
         <Field label="CNPJ">{formatCnpj(request.supplier_cnpj)}</Field>
@@ -110,11 +110,11 @@ function History({ request }: { request: RequestDetail }) {
 // Ação principal em preto (a cor de ação do sistema visual, §17); rejeitar é destrutiva, em vermelho com contorno.
 const ACTION_BUTTONS: Record<
   RequestAction,
-  { label: string; color: string; variant: 'filled' | 'outline' }
+  { label: string; variant: 'filled' | 'outline'; color?: string }
 > = {
-  approve: { label: 'Aprovar', color: 'ink', variant: 'filled' },
-  reject: { label: 'Rejeitar', color: '#B42318', variant: 'outline' },
-  markPaid: { label: 'Marcar como pago', color: 'ink', variant: 'filled' },
+  approve: { label: 'Aprovar', variant: 'filled' },
+  reject: { label: 'Rejeitar', variant: 'outline', color: palette.danger },
+  markPaid: { label: 'Marcar como pago', variant: 'filled' },
 };
 
 export function RequestDetailPage() {
@@ -125,7 +125,7 @@ export function RequestDetailPage() {
 
   if (detail.isPending) {
     return (
-      <Stack aria-label="Carregando solicitação">
+      <Stack role="status" aria-label="Carregando solicitação">
         <Skeleton h={32} w={320} />
         <Skeleton h={220} />
       </Stack>

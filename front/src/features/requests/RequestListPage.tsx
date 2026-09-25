@@ -18,6 +18,7 @@ import { useDebouncedCallback } from '@mantine/hooks';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
+import emptyIllustration from '../../assets/doodles/unboxing.svg';
 import { BusinessDateInput } from '../../components/BusinessDateInput';
 import { OverdueBadge } from '../../components/OverdueBadge';
 import { QueryErrorAlert } from '../../components/QueryErrorAlert';
@@ -25,7 +26,6 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { formatBusinessDate } from '../../lib/date';
 import { enumOptions, STATUS_LABELS } from '../../lib/labels';
 import { formatCents } from '../../lib/money';
-import emptyIllustration from '../../assets/doodles/unboxing.svg';
 import { palette } from '../../theme';
 import { NewRequestButton } from './NewRequestButton';
 import { fetchRequests, requestKeys, type RequestListItem } from './api';
@@ -174,7 +174,7 @@ export function RequestListPage() {
       </Card>
 
       {list.isPending && (
-        <Stack aria-label="Carregando solicitações">
+        <Stack role="status" aria-label="Carregando solicitações">
           {[1, 2, 3, 4, 5].map((key) => (
             <Skeleton key={key} h={36} />
           ))}
@@ -220,7 +220,7 @@ export function RequestListPage() {
         <Card p={0} pos="relative">
           <LoadingOverlay visible={list.isPlaceholderData} />
           <Table.ScrollContainer minWidth={900}>
-            <Table highlightOnHover horizontalSpacing="md">
+            <Table horizontalSpacing="md">
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Fornecedor</Table.Th>

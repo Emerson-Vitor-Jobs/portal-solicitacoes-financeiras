@@ -17,7 +17,7 @@ export function CnpjInput({ onChange, ...props }: Props) {
       transform={toUpperCaseChar}
       autoComplete="off"
       placeholder="00.000.000/0000-00"
-      onChangeRaw={(raw) => onChange(raw)}
+      onChangeRaw={(rawValue) => onChange(rawValue)}
     />
   );
 }

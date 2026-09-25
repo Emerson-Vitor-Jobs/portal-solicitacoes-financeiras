@@ -1,6 +1,7 @@
 import { Alert, Button, Center, Loader, Stack } from '@mantine/core';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { errorMessage, hasCode } from '../../api/errors';
+import type { LoginLocationState } from './login-state';
 import { SessionContext, useSessionQuery } from './session';
 
 export function RequireAuth() {
@@ -19,7 +20,8 @@ export function RequireAuth() {
   // o app nem perde o que está em edição. Um 401 UNAUTHENTICATED vai pro login pelo listener do client.
   if (session.data === undefined) {
     if (hasCode(session.error, 'UNAUTHENTICATED')) {
-      return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
+      const loginState: LoginLocationState = { from: location.pathname + location.search };
+      return <Navigate to="/login" replace state={loginState} />;
     }
     return (
       <Center h="100vh">

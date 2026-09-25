@@ -58,11 +58,7 @@ export function NewRequestModal() {
     },
     onError: (error) => {
       if (isApiError(error) && error.code === 'DUPLICATE_INVOICE') {
-        form.setError(
-          'invoice_number',
-          { message: 'Já existe uma solicitação com este CNPJ e número de nota fiscal.' },
-          { shouldFocus: true },
-        );
+        form.setError('invoice_number', { message: errorMessage(error) }, { shouldFocus: true });
         return;
       }
       if (isApiError(error) && error.code === 'VALIDATION_FAILED') {
