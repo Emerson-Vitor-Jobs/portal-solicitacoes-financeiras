@@ -1,30 +1,37 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { http } from 'msw';
 import { server } from '../../../test/msw';
 import { renderApp } from '../../../test/render';
 import { loginAs, problem, REQUESTER_EMAIL, state } from '../../test/fake-api';
 
+// Os campos são procurados DENTRO do modal: a lista aberta atrás dele também tem campos "Fornecedor" e
+// "Vencimento" (os filtros).
+function modal() {
+  return within(screen.getByRole('dialog', { name: 'Nova solicitação' }));
+}
+
 function postsToRequests() {
   return state.requestLog.filter((r) => r.method === 'POST' && r.url.pathname === '/api/requests');
 }
 
 async function fillValidForm(user: UserEvent, invoice = 'NF-2026-9001') {
-  await user.type(await screen.findByLabelText(/Fornecedor/), 'Aurora Serviços Digitais');
-  await user.type(screen.getByLabelText(/CNPJ do fornecedor/), '12abc34501de35');
-  await user.type(screen.getByLabelText(/Número da nota fiscal/), invoice);
-  await user.type(screen.getByLabelText(/Valor/), '155313');
+  await screen.findByRole('dialog', { name: 'Nova solicitação' });
+  await user.type(modal().getByLabelText(/Fornecedor/), 'Aurora Serviços Digitais');
+  await user.type(modal().getByLabelText(/CNPJ do fornecedor/), '12abc34501de35');
+  await user.type(modal().getByLabelText(/Número da nota fiscal/), invoice);
+  await user.type(modal().getByLabelText(/Valor/), '155313');
 
-  await user.click(screen.getByLabelText(/Competência/));
+  await user.click(modal().getByLabelText(/Competência/));
   await user.click(await screen.findByRole('button', { name: 'set' }));
 
-  await user.type(screen.getByLabelText(/Vencimento/), '30/09/2026');
+  await user.type(modal().getByLabelText(/Vencimento/), '30/09/2026');
 
-  await user.click(screen.getByLabelText(/Categoria/, { selector: 'input' }));
+  await user.click(modal().getByLabelText(/Categoria/, { selector: 'input' }));
   await user.click(await screen.findByRole('option', { name: 'Serviços' }));
 }
 
-describe('#10 NewRequestPage', () => {
+describe('#10 NewRequestModal', () => {
   test('#10 envia o corpo do contrato: centavos, CNPJ sem máscara, datas em string', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
@@ -84,11 +91,11 @@ describe('#10 NewRequestPage', () => {
 
     // CNPJ + nota do seed (Aurora, NF-2026-1001) já existem no fake.
     await fillValidForm(user, 'NF-2026-1001');
-    await user.clear(screen.getByLabelText(/CNPJ do fornecedor/));
-    await user.type(screen.getByLabelText(/CNPJ do fornecedor/), '10000000000145');
+    await user.clear(modal().getByLabelText(/CNPJ do fornecedor/));
+    await user.type(modal().getByLabelText(/CNPJ do fornecedor/), '10000000000145');
     await user.click(screen.getByRole('button', { name: 'Enviar solicitação' }));
 
-    const invoice = screen.getByLabelText(/Número da nota fiscal/);
+    const invoice = modal().getByLabelText(/Número da nota fiscal/);
     await waitFor(() => expect(invoice).toHaveAttribute('aria-invalid', 'true'));
     expect(
       screen.getByText('Já existe uma solicitação com este CNPJ e número de nota fiscal.'),
@@ -119,7 +126,7 @@ describe('#10 NewRequestPage', () => {
     await user.click(screen.getByRole('button', { name: 'Enviar solicitação' }));
 
     expect(await screen.findByText('CNPJ com dígito verificador inválido.')).toBeInTheDocument();
-    expect(screen.getByLabelText(/Valor/)).toHaveAccessibleDescription(
+    expect(modal().getByLabelText(/Valor/)).toHaveAccessibleDescription(
       /Valor acima do permitido\./,
     );
   });
@@ -129,7 +136,8 @@ describe('#10 NewRequestPage', () => {
     loginAs(REQUESTER_EMAIL);
     renderApp('/requests/new');
 
-    await user.type(await screen.findByLabelText(/CNPJ do fornecedor/), '12ABC');
+    await screen.findByRole('dialog', { name: 'Nova solicitação' });
+    await user.type(modal().getByLabelText(/CNPJ do fornecedor/), '12ABC');
     await user.click(screen.getByRole('button', { name: 'Enviar solicitação' }));
 
     expect(await screen.findByText('Informe o fornecedor.')).toBeInTheDocument();

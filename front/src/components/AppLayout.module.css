@@ -1,0 +1,27 @@
+.navlink {
+  --nl-color: #0b0a0a;
+  --nl-hover: #ffffff;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  font-weight: 500;
+  transition:
+    transform 80ms ease,
+    box-shadow 80ms ease;
+}
+
+.navlink:hover {
+  border-color: #0b0a0a;
+}
+
+.navlink[aria-current='page'] {
+  --nl-bg: #fff2cf;
+  --nl-color: #0b0a0a;
+  --nl-hover: #fff2cf;
+  border-color: #0b0a0a;
+  box-shadow: 3px 3px 0 #0b0a0a;
+}
+
+.navlink:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #0b0a0a;
+}

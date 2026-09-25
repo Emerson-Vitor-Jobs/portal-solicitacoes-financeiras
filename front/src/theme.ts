@@ -16,6 +16,23 @@ export const palette = {
   pink: '#FCB3C5',
 } as const;
 
+// Neo-brutalismo "soft" da barra lateral (§17): borda preta grossa, sombra dura deslocada e cantos arredondados.
+export const brutal = {
+  border: `2px solid ${palette.ink}`,
+  shadow: `4px 4px 0 ${palette.ink}`,
+  shadowSmall: `2px 2px 0 ${palette.ink}`,
+  radius: 12,
+} as const;
+
+// Cores pastel dos avatares (mesmos acentos dos status), escolhidas de forma estável pelo id do usuário.
+export const avatarColors = [
+  palette.yellow,
+  palette.blue,
+  palette.green,
+  palette.pink,
+  '#D6E1FF',
+] as const;
+
 // Escala do preto ao cinza-claro, montada a partir dos cinzas do Figma (do mais claro [0] ao mais escuro [9]).
 const ink: MantineColorsTuple = [
   '#F2F2F2',
@@ -63,7 +80,6 @@ export const theme = createTheme({
     Card: { defaultProps: { withBorder: true, radius: 'md', padding: 'lg' } },
     Paper: { defaultProps: { radius: 'md' } },
     Badge: { defaultProps: { radius: 'sm', variant: 'filled', fw: 600 } },
-    NavLink: { defaultProps: { variant: 'filled', color: 'ink' } },
     Table: { defaultProps: { highlightOnHover: true, verticalSpacing: 'sm' } },
   },
 });

@@ -6,7 +6,7 @@ import { RequireAuth } from './features/auth/RequireAuth';
 import { RequireRole } from './features/auth/RequireRole';
 import { SessionExpiryListener } from './features/auth/SessionExpiryListener';
 import { DashboardPage } from './features/dashboard/DashboardPage';
-import { NewRequestPage } from './features/requests/NewRequestPage';
+import { NewRequestModal } from './features/requests/NewRequestModal';
 import { RequestDetailPage } from './features/requests/RequestDetailPage';
 import { RequestListPage } from './features/requests/RequestListPage';
 
@@ -26,8 +26,10 @@ export const routes: RouteObject[] = [
               {
                 path: '/requests/new',
                 element: (
+                  // O modal abre sobre a lista (a página continua visível atrás, como contexto).
                   <RequireRole role="REQUESTER">
-                    <NewRequestPage />
+                    <RequestListPage />
+                    <NewRequestModal />
                   </RequireRole>
                 ),
               },

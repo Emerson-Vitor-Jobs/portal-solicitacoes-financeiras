@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { server } from '../test/msw';
@@ -41,7 +41,8 @@ describe('rotas protegidas e sessão', () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
     const { queryClient } = renderApp('/requests/new');
-    const supplier = await screen.findByLabelText(/Fornecedor/);
+    const form = within(await screen.findByRole('dialog', { name: 'Nova solicitação' }));
+    const supplier = form.getByLabelText(/Fornecedor/);
     await user.type(supplier, 'Texto em edição');
 
     server.use(http.get('*/api/auth/me', () => problem(500, 'INTERNAL', 'x')));
@@ -51,6 +52,6 @@ describe('rotas protegidas e sessão', () => {
 
     expect(queryClient.getQueryState(sessionQueryKey)?.status).toBe('error');
     expect(screen.queryByText('Não foi possível carregar a sessão')).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/Fornecedor/)).toHaveValue('Texto em edição');
+    expect(form.getByLabelText(/Fornecedor/)).toHaveValue('Texto em edição');
   });
 });

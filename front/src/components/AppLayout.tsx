@@ -1,47 +1,71 @@
 import {
+  ActionIcon,
   AppShell,
-  Badge,
+  Box,
   Burger,
   Button,
   Center,
   Group,
   NavLink,
+  ScrollArea,
+  Stack,
   Text,
   Title,
+  Tooltip,
+  UnstyledButton,
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import { useDisclosure, useLocalStorage, useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
+import {
+  IconFileInvoice,
+  IconLayoutDashboard,
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
+  IconLogout,
+  IconPlus,
+} from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { NavLink as RouterNavLink, Outlet, useNavigate } from 'react-router';
+import type { ReactNode } from 'react';
+import { Link, NavLink as RouterNavLink, Outlet, useNavigate } from 'react-router';
 import { errorMessage } from '../api/errors';
 import { logout } from '../features/auth/api';
 import { useSession } from '../features/auth/session';
 import { ROLE_LABELS } from '../lib/labels';
-import { palette } from '../theme';
+import { brutal, palette } from '../theme';
+import classes from './AppLayout.module.css';
+import { UserAvatar } from './UserAvatar';
 
-// Marca: um círculo preto com o "R$", no traço simples do sistema visual. Decorativa (o título ao lado já nomeia).
+// Marca: um círculo preto com o cifrão, igual ao favicon. Decorativa (o título ao lado já nomeia).
 function BrandMark() {
   return (
     <Center
       aria-hidden
-      w={32}
-      h={32}
+      w={36}
+      h={36}
       bg={palette.ink}
-      c="white"
-      fw={600}
-      fz="xs"
+      c={palette.cream}
+      fw={700}
       style={{ borderRadius: '50%', flexShrink: 0 }}
     >
-      R$
+      $
     </Center>
   );
 }
 
-type MenuItem = { to: string; label: string; end?: boolean };
+type MenuItem = { to: string; label: string; icon: ReactNode; end?: boolean };
 
 export function AppLayout() {
   const { user } = useSession();
-  const [opened, { toggle, close }] = useDisclosure(false);
+  // Celular: a lateral é uma gaveta aberta pelo hambúrguer do topo.
+  const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] = useDisclosure(false);
+  // Desktop: lateral aberta ou fechada, lembrada neste navegador. Aberta → o topo some; fechada → o topo volta.
+  const [desktopOpened, setDesktopOpened] = useLocalStorage({
+    key: 'gex:sidebar-aberta',
+    defaultValue: true,
+  });
+  // Abaixo do breakpoint `sm` (48em) a lateral vira gaveta, e o topo (com o hambúrguer) fica sempre visível.
+  const isMobile = useMediaQuery('(max-width: 48em)');
+  const headerVisible = isMobile === true || !desktopOpened;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -60,62 +84,184 @@ export function AppLayout() {
     },
   });
 
-  // Menu por papel: só o solicitante cria solicitação (POST /requests é do REQUESTER).
   const menu: MenuItem[] = [
-    { to: '/', label: 'Painel', end: true },
-    { to: '/requests', label: 'Solicitações', end: true },
-    ...(user.role === 'REQUESTER' ? [{ to: '/requests/new', label: 'Nova solicitação' }] : []),
+    { to: '/', label: 'Painel', icon: <IconLayoutDashboard size={20} stroke={1.8} />, end: true },
+    {
+      to: '/requests',
+      label: 'Solicitações',
+      icon: <IconFileInvoice size={20} stroke={1.8} />,
+      end: true,
+    },
   ];
+
+  const logoutButton = (compact: boolean) =>
+    compact ? (
+      <Tooltip label="Sair">
+        <ActionIcon
+          variant="default"
+          size="lg"
+          radius="md"
+          aria-label="Sair"
+          onClick={() => logoutMutation.mutate()}
+          loading={logoutMutation.isPending}
+          style={{ border: brutal.border, boxShadow: brutal.shadowSmall }}
+        >
+          <IconLogout size={18} />
+        </ActionIcon>
+      </Tooltip>
+    ) : (
+      <Button
+        fullWidth
+        variant="default"
+        leftSection={<IconLogout size={18} />}
+        onClick={() => logoutMutation.mutate()}
+        loading={logoutMutation.isPending}
+        style={{ border: brutal.border, boxShadow: brutal.shadowSmall, borderRadius: 10 }}
+      >
+        Sair
+      </Button>
+    );
 
   return (
     <AppShell
-      header={{ height: 64 }}
-      navbar={{ width: 240, breakpoint: 'sm', collapsed: { mobile: !opened } }}
+      header={{ height: 64, collapsed: !headerVisible }}
+      navbar={{
+        width: 272,
+        breakpoint: 'sm',
+        collapsed: { mobile: !mobileOpened, desktop: !desktopOpened },
+      }}
       padding="lg"
       styles={{ main: { backgroundColor: palette.background } }}
     >
-      {/* Faixa creme da marca no topo, como nas telas do sistema visual (§17). */}
-      <AppShell.Header bg={palette.cream} withBorder={false}>
-        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
-          <Group wrap="nowrap">
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label="Menu" />
-            <Group gap="xs" wrap="nowrap">
+      {/* Topo: aparece com a lateral fechada (desktop) e sempre no celular. Recolhido, o conteúdo nem é
+          renderizado: sem itens invisíveis pro leitor de tela nem pro Tab. */}
+      <AppShell.Header bg={palette.cream} style={{ borderBottom: brutal.border }}>
+        {headerVisible && (
+          <Group h="100%" px="md" justify="space-between" wrap="nowrap">
+            <Group wrap="nowrap" gap="sm">
+              <Burger
+                opened={mobileOpened}
+                onClick={toggleMobile}
+                hiddenFrom="sm"
+                size="sm"
+                aria-label="Menu"
+              />
+              <Tooltip label="Abrir menu">
+                <ActionIcon
+                  visibleFrom="sm"
+                  variant="default"
+                  size="lg"
+                  radius="md"
+                  aria-label="Abrir menu"
+                  onClick={() => setDesktopOpened(true)}
+                  style={{ border: brutal.border, boxShadow: brutal.shadowSmall }}
+                >
+                  <IconLayoutSidebarLeftExpand size={18} />
+                </ActionIcon>
+              </Tooltip>
               <BrandMark />
               <Title order={1} size="h4" lh={1.2}>
-                Portal de Solicitações Financeiras
+                Portal Financeiro
               </Title>
             </Group>
+            <Group wrap="nowrap" gap="sm">
+              <UserAvatar id={user.id} name={user.name} size={36} />
+              <Text size="sm" fw={500} visibleFrom="sm">
+                {user.name}
+              </Text>
+              {logoutButton(true)}
+            </Group>
           </Group>
-          <Group wrap="nowrap" gap="sm">
-            <Text size="sm" visibleFrom="sm">
-              {user.name}
-            </Text>
-            <Badge variant="outline" color="ink">
-              {ROLE_LABELS[user.role]}
-            </Badge>
-            <Button
-              variant="default"
-              size="xs"
-              onClick={() => logoutMutation.mutate()}
-              loading={logoutMutation.isPending}
-            >
-              Sair
-            </Button>
-          </Group>
-        </Group>
+        )}
       </AppShell.Header>
-      <AppShell.Navbar p="sm" aria-label="Menu principal">
-        {menu.map((item) => (
-          <NavLink
-            key={item.to}
-            component={RouterNavLink}
-            to={item.to}
-            end={item.end}
-            label={item.label}
-            onClick={close}
-          />
-        ))}
+
+      {/* Lateral neo-brutalista: marca, navegação, ação principal e o usuário com o botão de sair. */}
+      <AppShell.Navbar
+        p="md"
+        aria-label="Menu principal"
+        bg={palette.cream}
+        style={{ borderRight: brutal.border }}
+      >
+        <AppShell.Section>
+          <Group justify="space-between" wrap="nowrap" mb="lg">
+            <Group gap="sm" wrap="nowrap">
+              <BrandMark />
+              <Title order={1} size="h4" lh={1.1} style={{ whiteSpace: 'nowrap' }}>
+                Portal Financeiro
+              </Title>
+            </Group>
+            <Tooltip label="Fechar menu">
+              <ActionIcon
+                visibleFrom="sm"
+                variant="default"
+                size="lg"
+                radius="md"
+                aria-label="Fechar menu"
+                onClick={() => setDesktopOpened(false)}
+                style={{ border: brutal.border, boxShadow: brutal.shadowSmall }}
+              >
+                <IconLayoutSidebarLeftCollapse size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        </AppShell.Section>
+
+        <AppShell.Section grow component={ScrollArea}>
+          <Stack gap={6}>
+            {menu.map((item) => (
+              <NavLink
+                key={item.to}
+                component={RouterNavLink}
+                to={item.to}
+                end={item.end}
+                label={item.label}
+                leftSection={item.icon}
+                onClick={closeMobile}
+                className={classes.navlink}
+              />
+            ))}
+          </Stack>
+
+          {/* Criar é do solicitante (POST /requests é do REQUESTER): abre o modal sobre a lista. */}
+          {user.role === 'REQUESTER' && (
+            <Button
+              component={Link}
+              to="/requests/new"
+              onClick={closeMobile}
+              fullWidth
+              mt="lg"
+              leftSection={<IconPlus size={18} />}
+              style={{ border: brutal.border, boxShadow: brutal.shadow, borderRadius: 10 }}
+            >
+              Nova solicitação
+            </Button>
+          )}
+        </AppShell.Section>
+
+        <AppShell.Section>
+          <Box
+            p="sm"
+            bg="white"
+            style={{ border: brutal.border, boxShadow: brutal.shadow, borderRadius: brutal.radius }}
+          >
+            <UnstyledButton component="div" w="100%" mb="sm">
+              <Group gap="sm" wrap="nowrap">
+                <UserAvatar id={user.id} name={user.name} size={44} />
+                <Box style={{ minWidth: 0 }}>
+                  <Text fw={600} truncate>
+                    {user.name}
+                  </Text>
+                  <Text size="xs" c={palette.textSecondary}>
+                    {ROLE_LABELS[user.role]}
+                  </Text>
+                </Box>
+              </Group>
+            </UnstyledButton>
+            {logoutButton(false)}
+          </Box>
+        </AppShell.Section>
       </AppShell.Navbar>
+
       <AppShell.Main>
         <Outlet />
       </AppShell.Main>
