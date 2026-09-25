@@ -89,12 +89,31 @@ describe('handler central de erro', () => {
     expectProblem(res, 422, 'VALIDATION_FAILED');
   });
 
-  test('rota do contrato ainda sem implementação → 501 NOT_IMPLEMENTED', async () => {
-    expectProblem(
-      await app.inject({ method: 'GET', url: '/api/dashboard/summary' }),
-      501,
-      'NOT_IMPLEMENTED',
-    );
+  test('nenhuma rota do contrato responde 501 (todas implementadas)', async () => {
+    const id = '20000000-0000-4000-8000-000000000001';
+    const calls = [
+      { method: 'GET', url: '/api/auth/me', cookie: requester },
+      { method: 'GET', url: '/api/requests', cookie: requester },
+      { method: 'POST', url: '/api/requests', cookie: requester, payload: {} },
+      { method: 'GET', url: `/api/requests/${id}`, cookie: requester },
+      { method: 'POST', url: `/api/requests/${id}/decision`, cookie: finance, payload: {} },
+      { method: 'POST', url: `/api/requests/${id}/mark-paid`, cookie: finance, payload: {} },
+      { method: 'GET', url: '/api/dashboard/summary', cookie: finance },
+      { method: 'POST', url: '/api/auth/login', cookie: '', payload: {} },
+      { method: 'POST', url: '/api/auth/logout', cookie: finance, payload: {} },
+    ] as const;
+    // Cobre todas as rotas do openapi.json: se uma rota nova aparecer no contrato, este teste precisa dela.
+    const documented = Object.keys(app.swagger().paths ?? {}).filter((p) => p !== '/api/health');
+    expect(new Set(calls.map((c) => c.url.replace(id, '{id}')))).toEqual(new Set(documented));
+    for (const c of calls) {
+      const res = await app.inject({
+        method: c.method,
+        url: c.url,
+        headers: { ...json, cookie: c.cookie },
+        ...('payload' in c ? { payload: c.payload } : {}),
+      });
+      expect(res.statusCode, `${c.method} ${c.url}`).not.toBe(501);
+    }
   });
 
   test('o OpenAPI é servido em /api/docs/json', async () => {

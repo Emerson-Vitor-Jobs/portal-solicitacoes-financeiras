@@ -9,6 +9,7 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from 'fastify-type-provider-zod';
+import type { DashboardController } from './controller/dashboard.js';
 import type { RequestController } from './controller/requests.js';
 import { registerErrorHandling } from './errors.js';
 import { logControllerOptions, loggerOptions, type LogStream } from './logging.js';
@@ -25,6 +26,7 @@ export interface ServerDeps {
   health: HealthDeps;
   auth: AuthRouteDeps;
   requests: RequestController;
+  dashboard: DashboardController;
 }
 
 // Monta o app sem abrir porta: os testes usam app.inject() e o gerador do OpenAPI usa app.swagger().
@@ -67,7 +69,7 @@ export async function buildServer(deps: ServerDeps): Promise<FastifyInstance> {
   healthRoutes(app, deps.health);
   authRoutes(app, deps.auth);
   requestRoutes(app, { auth: deps.auth.service, controller: deps.requests });
-  dashboardRoutes(app);
+  dashboardRoutes(app, { auth: deps.auth.service, controller: deps.dashboard });
 
   return app;
 }
