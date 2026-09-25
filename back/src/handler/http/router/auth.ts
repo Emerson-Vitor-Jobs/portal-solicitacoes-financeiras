@@ -1,12 +1,22 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import type { AuthService } from '../../../service/auth.js';
 import { loginBodySchema, loginResponseSchema, meResponseSchema } from '../../../types/auth.js';
-import { NotImplementedError } from '../errors.js';
+import type { AuthController } from '../controller/auth.js';
+import { sessionUser } from '../request_context.js';
 import { CSRF_NOTE, SESSION, errors } from './contract.js';
+import { SESSION_COOKIE, authenticate, loginRateLimit, type LoginRateLimit } from './hooks.js';
 
-export function authRoutes(app: FastifyInstance): void {
+export interface AuthRouteDeps {
+  service: AuthService;
+  controller: AuthController;
+  loginRateLimit: LoginRateLimit;
+}
+
+export function authRoutes(app: FastifyInstance, deps: AuthRouteDeps): void {
   const r = app.withTypeProvider<ZodTypeProvider>();
+  const session = authenticate(deps.service);
 
   r.post('/api/auth/login', {
     schema: {
@@ -24,9 +34,8 @@ export function authRoutes(app: FastifyInstance): void {
         501: errors[501],
       },
     },
-    handler: () => {
-      throw new NotImplementedError();
-    },
+    preHandler: loginRateLimit(app, deps.loginRateLimit),
+    handler: (request, reply) => deps.controller.login(request.body, reply),
   });
 
   r.post('/api/auth/logout', {
@@ -42,8 +51,11 @@ export function authRoutes(app: FastifyInstance): void {
         501: errors[501],
       },
     },
-    handler: () => {
-      throw new NotImplementedError();
+    onRequest: session,
+    handler: async (request, reply) => {
+      // O hook authenticate já garantiu que o cookie existe e aponta para uma sessão válida.
+      await deps.controller.logout(request.cookies[SESSION_COOKIE] ?? '', reply);
+      return reply.code(204).send(null);
     },
   });
 
@@ -54,8 +66,7 @@ export function authRoutes(app: FastifyInstance): void {
       security: SESSION,
       response: { 200: meResponseSchema, 401: errors[401], 501: errors[501] },
     },
-    handler: () => {
-      throw new NotImplementedError();
-    },
+    onRequest: session,
+    handler: (request) => deps.controller.me(sessionUser(request)),
   });
 }

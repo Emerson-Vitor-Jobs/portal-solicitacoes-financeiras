@@ -1,10 +1,18 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import type { AuthService } from '../../../service/auth.js';
 import { dashboardSummarySchema } from '../../../types/dashboard.js';
-import { NotImplementedError } from '../errors.js';
+import type { DashboardController } from '../controller/dashboard.js';
+import { sessionUser } from '../request_context.js';
 import { SESSION, errors } from './contract.js';
+import { authenticate } from './hooks.js';
 
-export function dashboardRoutes(app: FastifyInstance): void {
+export interface DashboardRouteDeps {
+  auth: AuthService;
+  controller: DashboardController;
+}
+
+export function dashboardRoutes(app: FastifyInstance, deps: DashboardRouteDeps): void {
   app.withTypeProvider<ZodTypeProvider>().get('/api/dashboard/summary', {
     schema: {
       tags: ['dashboard'],
@@ -13,8 +21,7 @@ export function dashboardRoutes(app: FastifyInstance): void {
       security: SESSION,
       response: { 200: dashboardSummarySchema, 401: errors[401], 501: errors[501] },
     },
-    handler: () => {
-      throw new NotImplementedError();
-    },
+    onRequest: authenticate(deps.auth),
+    handler: (request) => deps.controller.summary(sessionUser(request)),
   });
 }

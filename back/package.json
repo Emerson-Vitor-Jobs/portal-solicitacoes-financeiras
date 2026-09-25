@@ -13,7 +13,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "./scripts/test-integration.sh",
     "gen:sql": "./scripts/gen-sql.sh",
     "gen:openapi": "tsx scripts/gen-openapi.ts"
   },
@@ -33,6 +35,8 @@
     "vitest": "5.0.1"
   },
   "dependencies": {
+    "@fastify/cookie": "11.1.2",
+    "@fastify/rate-limit": "11.2.0",
     "@fastify/swagger": "9.9.0",
     "@fastify/swagger-ui": "6.1.1",
     "@node-rs/argon2": "2.2.1",

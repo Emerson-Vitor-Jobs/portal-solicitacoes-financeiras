@@ -1,20 +1,20 @@
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { buildServer } from './server.js';
+import { CSRF, buildTestServer, loginAs } from '../../../test/support/server.js';
+import { ANA, FERNANDA } from '../../../test/support/users.js';
 
 // Contrato de erro (RFC 9457) exercido pelas rotas ainda não implementadas (DECISOES_FUNDACAO §4a, §5).
 let app: FastifyInstance;
+let requester: string;
+let finance: string;
 beforeAll(async () => {
-  app = await buildServer({
-    trustProxy: false,
-    logger: false,
-    health: { ping: () => Promise.resolve() },
-  });
-  await app.ready();
+  ({ app } = await buildTestServer());
+  requester = await loginAs(app, ANA);
+  finance = await loginAs(app, FERNANDA);
 });
 afterAll(() => app.close());
 
-const json = { 'content-type': 'application/json' };
+const json = { 'content-type': 'application/json', ...CSRF };
 
 function expectProblem(
   res: { statusCode: number; headers: Record<string, unknown>; json: () => unknown },
@@ -45,7 +45,7 @@ describe('handler central de erro', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/requests',
-      headers: json,
+      headers: { ...json, cookie: requester },
       payload: {
         supplier_name: '',
         amount_cents: 12.5,
@@ -73,7 +73,7 @@ describe('handler central de erro', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/requests/20000000-0000-4000-8000-000000000001/decision',
-      headers: json,
+      headers: { ...json, cookie: finance },
       payload: { decision: 'REJECT' },
     });
     expectProblem(res, 422, 'VALIDATION_FAILED');
@@ -81,16 +81,39 @@ describe('handler central de erro', () => {
   });
 
   test('page_size acima de 100 → 422', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/requests?page_size=101' });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/requests?page_size=101',
+      headers: { cookie: requester },
+    });
     expectProblem(res, 422, 'VALIDATION_FAILED');
   });
 
-  test('rota do contrato ainda sem implementação → 501 NOT_IMPLEMENTED', async () => {
-    expectProblem(
-      await app.inject({ method: 'GET', url: '/api/dashboard/summary' }),
-      501,
-      'NOT_IMPLEMENTED',
-    );
+  test('nenhuma rota do contrato responde 501 (todas implementadas)', async () => {
+    const id = '20000000-0000-4000-8000-000000000001';
+    const calls = [
+      { method: 'GET', url: '/api/auth/me', cookie: requester },
+      { method: 'GET', url: '/api/requests', cookie: requester },
+      { method: 'POST', url: '/api/requests', cookie: requester, payload: {} },
+      { method: 'GET', url: `/api/requests/${id}`, cookie: requester },
+      { method: 'POST', url: `/api/requests/${id}/decision`, cookie: finance, payload: {} },
+      { method: 'POST', url: `/api/requests/${id}/mark-paid`, cookie: finance, payload: {} },
+      { method: 'GET', url: '/api/dashboard/summary', cookie: finance },
+      { method: 'POST', url: '/api/auth/login', cookie: '', payload: {} },
+      { method: 'POST', url: '/api/auth/logout', cookie: finance, payload: {} },
+    ] as const;
+    // Cobre todas as rotas do openapi.json: se uma rota nova aparecer no contrato, este teste precisa dela.
+    const documented = Object.keys(app.swagger().paths ?? {}).filter((p) => p !== '/api/health');
+    expect(new Set(calls.map((c) => c.url.replace(id, '{id}')))).toEqual(new Set(documented));
+    for (const c of calls) {
+      const res = await app.inject({
+        method: c.method,
+        url: c.url,
+        headers: { ...json, cookie: c.cookie },
+        ...('payload' in c ? { payload: c.payload } : {}),
+      });
+      expect(res.statusCode, `${c.method} ${c.url}`).not.toBe(501);
+    }
   });
 
   test('o OpenAPI é servido em /api/docs/json', async () => {
