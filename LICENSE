@@ -35,6 +35,8 @@ Material de terceiros (não coberto pela licença acima; cada um segue a sua)
 - data/*.json: dados do desafio fornecidos pela GEX, reproduzidos sem alteração.
 - front/src/assets/doodles/*.svg: Open Doodles, de Pablo Stanley, CC0 1.0
   (https://www.opendoodles.com). Ver front/src/assets/doodles/LICENSE.md.
+- front/src/assets/humaaans/team-walking.svg: Humaaans, de Pablo Stanley, CC0 1.0
+  (https://www.humaaans.com), recolorida. Ver front/src/assets/humaaans/LICENSE.md.
 - Sistema visual (paleta e tipografia) inspirado em "EasyPay: E-Wallet Digital
   Payment App", de Nickelfox (Figma Community), CC BY 4.0
   (https://creativecommons.org/licenses/by/4.0/). Nenhum arquivo daquele projeto

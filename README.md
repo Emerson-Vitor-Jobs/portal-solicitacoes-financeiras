@@ -104,6 +104,6 @@ Material de terceiros (cada um sob a sua própria licença):
 
 - Sistema visual (paleta e tipografia) inspirado em [EasyPay: E-Wallet Digital Payment App](https://www.figma.com/community/file/1146678238901785717/easypay-e-wallet-digital-payment-app),
   de Nickelfox (Figma Community, CC BY 4.0).
-- Ilustrações [Open Doodles](https://www.opendoodles.com), de Pablo Stanley (CC0).
+- Ilustrações [Open Doodles](https://www.opendoodles.com) e [Humaaans](https://www.humaaans.com), de Pablo Stanley (CC0).
 - Fontes IBM Plex Sans e Roboto (SIL Open Font License 1.1).
 - `data/`: dados do desafio, reproduzidos sem alteração.

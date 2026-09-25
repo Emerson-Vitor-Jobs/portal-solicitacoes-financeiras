@@ -873,7 +873,9 @@ do portal. Toda a identidade mora em `front/src/theme.ts` (tema do Mantine); os 
 entrega é clonado pelo avaliador. No lugar delas usamos [Open Doodles](https://www.opendoodles.com/about), de Pablo
 Stanley, no mesmo estilo de traço preto e com licença **CC0** (uso, edição e redistribuição livres). O rosa original foi
 trocado pelas cores da paleta. Ficam em `front/src/assets/doodles/`, com um `LICENSE.md`. São usadas no login e no estado
-vazio da lista.
+vazio da lista. O painel usa uma cena do [Humaaans](https://www.humaaans.com) (também de Pablo Stanley, **CC0**,
+o estilo que popularizou o "Corporate Memphis"), recolorida para a paleta, num banner de boas-vindas com atalhos.
+O unDraw foi descartado pelo mesmo motivo do IconScout: a licença dele proíbe redistribuir as ilustrações em pacote.
 
 **UX, além da cor:**
 - O painel explica cada número numa linha ("Aguardando aprovação ou rejeição"…).

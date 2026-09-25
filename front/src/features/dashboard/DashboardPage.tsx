@@ -1,9 +1,24 @@
-import { Alert, Button, Card, SimpleGrid, Skeleton, Stack, Text, Title } from '@mantine/core';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  Group,
+  Image,
+  SimpleGrid,
+  Skeleton,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
+import { IconFileInvoice, IconPlus } from '@tabler/icons-react';
+import { Link } from 'react-router';
+import teamWalking from '../../assets/humaaans/team-walking.svg';
 import { useQuery } from '@tanstack/react-query';
 import { errorMessage } from '../../api/errors';
 import { formatBusinessDate, formatMonthLabel } from '../../lib/date';
 import { formatCents } from '../../lib/money';
-import { palette } from '../../theme';
+import { brutal, palette } from '../../theme';
 import { useSession } from '../auth/session';
 import { dashboardQueryKey, fetchSummary } from './api';
 
@@ -29,6 +44,63 @@ function Indicator({ label, value, hint, highlight = false }: IndicatorProps) {
       <Text size="xs" c={highlight ? 'ink.3' : palette.textSecondary} mt="xs">
         {hint}
       </Text>
+    </Card>
+  );
+}
+
+function WelcomeBanner({ name, isRequester }: { name: string; isRequester: boolean }) {
+  const firstName = name.split(' ')[0] ?? name;
+  return (
+    <Card
+      bg={palette.cream}
+      withBorder={false}
+      p="xl"
+      style={{ border: brutal.border, boxShadow: brutal.shadow, borderRadius: brutal.radius }}
+    >
+      <Group justify="space-between" align="center" wrap="wrap" gap="xl">
+        <Stack gap="sm" maw={560}>
+          <Title order={2} size="h3">
+            Olá, {firstName}.
+          </Title>
+          <Text c={palette.textSecondary}>
+            {isRequester
+              ? 'Cadastre despesas e acompanhe cada uma do envio ao pagamento.'
+              : 'Revise o que está pendente e registre os pagamentos aprovados.'}
+          </Text>
+          <Group gap="sm" mt="xs">
+            {isRequester && (
+              <Button
+                component={Link}
+                to="/requests/new"
+                leftSection={<IconPlus size={18} />}
+                style={{ border: brutal.border, boxShadow: brutal.shadowSmall }}
+              >
+                Nova solicitação
+              </Button>
+            )}
+            <Button
+              component={Link}
+              to="/requests?status=PENDING"
+              variant="default"
+              leftSection={<IconFileInvoice size={18} />}
+              style={{ border: brutal.border, boxShadow: brutal.shadowSmall }}
+            >
+              Ver pendentes
+            </Button>
+            <Button
+              component={Link}
+              to="/requests?status=APPROVED"
+              variant="default"
+              style={{ border: brutal.border, boxShadow: brutal.shadowSmall }}
+            >
+              Ver aprovadas
+            </Button>
+          </Group>
+        </Stack>
+        <Box visibleFrom="md" style={{ flex: 1, minWidth: 320, maxWidth: 560 }}>
+          <Image src={teamWalking} alt="" />
+        </Box>
+      </Group>
     </Card>
   );
 }
@@ -90,6 +162,7 @@ export function DashboardPage() {
           </SimpleGrid>
         </>
       )}
+      <WelcomeBanner name={user.name} isRequester={user.role === 'REQUESTER'} />
     </Stack>
   );
 }
