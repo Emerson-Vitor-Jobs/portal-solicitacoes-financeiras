@@ -285,6 +285,9 @@ O `mark-paid` rejeita com **422** `VALIDATION_FAILED` (`errors: [{ field: "paid_
    abaixo.
 2. **Antes da aprovação:** `paid_at <` o instante do evento `APPROVED` da auditoria, lido **na mesma transação**
    do pagamento.
+   A comparação é feita **no minuto**, a precisão que o formulário oferece (data + hora HH:mm). Achado no teste no
+   navegador: aprovar às 14:51:37 e pagar "agora" (14:51 = 14:51:00) era recusado. Pagar no minuto anterior ao da
+   aprovação continua recusado.
 - **Revisão (implementação):** a primeira versão limitava o "futuro" ao fim do dia de referência (`APP_TODAY`).
   Na avaliação isso quebrava o fluxo principal: com `APP_TODAY=2026-09-18` e o relógio real depois dessa data, a
   aprovação grava um instante real (ex.: 25/09). O pagamento precisaria ser ≤ 18/09 **e** ≥ 25/09, o que é impossível.

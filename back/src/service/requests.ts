@@ -263,7 +263,9 @@ export class RequestService {
         if (approvedAt === null) {
           throw new Error('invariante quebrada: solicitação aprovada sem evento de aprovação');
         }
-        if (input.paidAt.getTime() < approvedAt.getTime()) {
+        // Compara na precisão que a pessoa consegue informar: o formulário tem data e hora até o MINUTO. Sem isso,
+        // aprovar às 14:51:37 e pagar "agora" (14:51, ou seja 14:51:00) seria recusado como anterior à aprovação.
+        if (input.paidAt.getTime() < floorToMinute(approvedAt).getTime()) {
           throw new ValidationError([
             { field: 'paid_at', message: 'O pagamento não pode ser anterior à aprovação.' },
           ]);
@@ -325,6 +327,10 @@ export class RequestService {
   private toDetail(found: { request: FinanceRequest; history: AuditEvent[] }): RequestDetail {
     return { ...withOverdue(found.request, this.deps.today()), history: found.history };
   }
+}
+
+function floorToMinute(instant: Date): Date {
+  return new Date(Math.floor(instant.getTime() / 60_000) * 60_000);
 }
 
 function withOverdue(request: FinanceRequest, referenceDate: string): RequestView {

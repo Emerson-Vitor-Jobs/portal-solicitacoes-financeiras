@@ -230,6 +230,21 @@ describe('#14 travas da data de pagamento', () => {
     expect(repo.events).toHaveLength(before);
   });
 
+  test('aprovar e pagar no mesmo minuto: a hora do formulário (sem segundos) é aceita', async () => {
+    // O formulário informa até o minuto: aprovado às 14:51:37, "agora" no modal é 14:51 (= 14:51:00).
+    clock = new Date('2026-09-25T14:52:10-03:00');
+    seedIn('APPROVED');
+    repo.events.at(-1)!.createdAt = new Date('2026-09-25T14:51:37-03:00');
+    await expect(pay('2026-09-25T14:51:00-03:00')).resolves.toMatchObject({ status: 'PAID' });
+  });
+
+  test('no minuto anterior ao da aprovação continua recusado', async () => {
+    clock = new Date('2026-09-25T14:52:10-03:00');
+    seedIn('APPROVED');
+    repo.events.at(-1)!.createdAt = new Date('2026-09-25T14:51:37-03:00');
+    await expect(pay('2026-09-25T14:50:59-03:00')).rejects.toThrow(ValidationError);
+  });
+
   test('APP_TODAY no passado e aprovação "agora": pagar "agora" é aceito', async () => {
     // Referência 18/09 (today), relógio real 25/09: a aprovação real foi agora há pouco.
     clock = new Date('2026-09-25T15:00:00-03:00');
