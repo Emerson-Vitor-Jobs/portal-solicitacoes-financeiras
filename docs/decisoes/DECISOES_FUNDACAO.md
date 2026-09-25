@@ -641,7 +641,7 @@ Revisada contra os dados do desafio. Uma primeira versão propunha "máscara est
   no dashboard, em dia no detalhe" (fuso do navegador, virada do dia, `APP_TODAY` diferente do relógio real).
 
 ### 14.3 Front: fechado
-React Router · Mantine v8 com datas em string `YYYY-MM-DD` (o `DateInput` do v8 trabalha com `string | null`) ·
+React Router · Mantine com datas em string `YYYY-MM-DD` (o `DateInput` trabalha com `string | null` desde a v8; versão final na §15) ·
 biblioteca de máscara decidida na E6 (não bloqueia).
 
 ### 14.4 Ferramental: fechado
@@ -692,3 +692,57 @@ Retry-After: 42
 - O `type` continua `about:blank`, como definido na 4a: pela RFC 9457 ele significa "o status já diz tudo", e o
   `code` (extensão) dá a semântica de máquina. Não inventamos um URI de tipo que ninguém consegue resolver, pelo mesmo
   princípio da 5.3.
+
+## 15. Versões das dependências — FECHADA
+
+Levantadas em 25/09/2026 no registro do npm, com os `peerDependencies` de cada pacote conferidos entre si.
+
+| Pacote | Versão | Observação |
+| --- | --- | --- |
+| **TypeScript** | **5.9.3** | **Não** a última (7.0.2). Ver abaixo |
+| React / React DOM | 19.3.0 | |
+| Mantine (`core`, `dates`, `notifications`, `hooks`) | **9.6.2** | Exige React ≥ 19.2 |
+| React Router | 8.4.0 | Exige React ≥ 19.2.7 e Node ≥ 22.22 |
+| Vite / `@vitejs/plugin-react` | 8.3.1 / 6.1.1 | |
+| Vitest / `@vitest/coverage-v8` | 5.0.1 | Aceita Vite 8 e Node 24 |
+| ESLint / `typescript-eslint` | 10.11.0 / 8.70.1 | |
+| Prettier | 3.9.9 | |
+| Testing Library (`react` / `user-event` / `jest-dom`) · MSW · jsdom | 16.3.3 / 14.6.7 / 7.0.1 · 2.15.0 · 30.1.1 | |
+| TanStack Query · React Hook Form · `@hookform/resolvers` | 5.103.2 · 7.88.0 · 5.9.1 | |
+| Fastify · Zod · `fastify-type-provider-zod` | 5.12.5 · 4.6.5 · 7.0.0 | |
+| `@fastify/swagger` / `swagger-ui` / `cookie` / `rate-limit` | 9.9.0 / 6.1.1 / 11.1.2 / **11.2.0** | rate-limit ≥ 11.2.0 pela correção do IPv6 (§14.6) |
+| pg · `@node-rs/argon2` · PgTyped (`cli` / `runtime`) | 8.23.0 · 2.2.1 · 2.4.3 / 2.4.2 | |
+| openapi-typescript · openapi-fetch | 7.13.0 · 0.17.0 | |
+
+**Regras:**
+- **Versões exatas** no `package.json` (sem `^` nem `~`) + `package-lock.json` commitado. O avaliador instala
+  exatamente o que foi testado.
+- Atualização de dependência é uma decisão, não um efeito colateral de `npm install`.
+
+**Por quê: TypeScript 5.9.3 e não 7.0.2**
+1. O TypeScript 7 é o compilador reescrito em Go (tsgo) e **ainda não tem API programática**. As ferramentas que leem
+   o código com o compilador dependem dessa API.
+2. Os `peerDependencies` que decidem:
+
+| Ferramenta | TypeScript aceito |
+| --- | --- |
+| `typescript-eslint` 8.70 (as regras com tipo, como `no-floating-promises`, §14.4) | `>=4.8.4 <6.1.0` |
+| `@pgtyped/cli` 2.4.3 (§12) | `3.1 - 5` |
+| `openapi-typescript` 7.13 (§2) | `^5.x` |
+
+3. **A única faixa que satisfaz as três é a 5.x**, e a 5.9.3 é a última dela. A 6.0 serviria pro ESLint, mas quebraria o
+   PgTyped e o openapi-typescript: o npm recusa conflito de peer (`ERESOLVE`), e forçar com `--legacy-peer-deps` seria
+   esconder a incompatibilidade.
+4. Mesmo raciocínio do Node 24 LTS (§13): numa entrega avaliável, previsibilidade vale mais que novidade.
+
+**Por quê: Mantine 9 e não a v8 citada nas decisões anteriores**
+1. As decisões iniciais citavam a v8, que era a referência na hora. A última estável hoje é a **9.6.2**.
+2. **O motivo da escolha continua válido:** as datas em string `YYYY-MM-DD` entraram na v8 e foram mantidas na v9.
+   As quebras da v9 (variáveis de CSS do variant `light`, `gutter` → `gap` no `Grid`, React ≥ 19.2) não afetam um
+   projeto que começa do zero.
+3. Começar um projeto novo na major anterior seria dívida desde o primeiro dia.
+4. **Verificação na E0b:** conferir pelos tipos instalados que o `DateInput` da v9 recebe `string | null`.
+
+Fontes: registro do npm (`registry.npmjs.org`, `peerDependencies` de cada pacote);
+[typescript-eslint #12518: TypeScript 7.0.2 Support](https://github.com/typescript-eslint/typescript-eslint/issues/12518);
+[Mantine 8.x → 9.x](https://mantine.dev/guides/8x-to-9x/); [Mantine v8.0.0](https://mantine.dev/changelog/8-0-0/).

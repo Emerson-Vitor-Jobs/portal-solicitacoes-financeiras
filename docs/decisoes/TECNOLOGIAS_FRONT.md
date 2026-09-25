@@ -13,4 +13,4 @@
 - **Valor em reais:** `parseBRLToCents` (gramática BR estrita, oráculo oficial) + máscara estilo banco na digitação.
   Nada de `NumberInput` (float). Biblioteca da máscara decidida na E6.
 - **CNPJ:** máscara alfanumérica (§11). Biblioteca decidida na E6.
-- **Datas:** Mantine v8 com strings `YYYY-MM-DD`. `is_overdue` e `reference_date` vêm da API (§14.2).
+- **Datas:** Mantine 9 (§15) com strings `YYYY-MM-DD`. `is_overdue` e `reference_date` vêm da API (§14.2).
