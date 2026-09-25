@@ -25,7 +25,6 @@ const TITLES: Record<number, string> = {
   422: 'Unprocessable Content',
   429: 'Too Many Requests',
   500: 'Internal Server Error',
-  501: 'Not Implemented',
 };
 
 export function problem(
@@ -47,10 +46,6 @@ export function problem(
 // O corpo vai serializado à mão: o Content-Type é application/problem+json e não passa pelo serializador da rota.
 export function sendProblem(reply: FastifyReply, body: Problem): FastifyReply {
   return reply.code(body.status).type('application/problem+json').send(JSON.stringify(body));
-}
-
-export class NotImplementedError extends Error {
-  override readonly name = 'NotImplementedError';
 }
 
 function fromDomain(err: DomainError): Problem {
@@ -83,9 +78,6 @@ export function registerErrorHandling(app: FastifyInstance): void {
       return sendProblem(reply, problem(422, 'VALIDATION_FAILED', 'Dados inválidos.', errors));
     }
     if (err instanceof DomainError) return sendProblem(reply, fromDomain(err));
-    if (err instanceof NotImplementedError) {
-      return sendProblem(reply, problem(501, 'NOT_IMPLEMENTED', 'Rota ainda não implementada.'));
-    }
     // JSON quebrado ou corpo vazio: nem dá pra ler → 400 (§5.1).
     if (
       err.code === 'FST_ERR_CTP_INVALID_JSON_BODY' ||

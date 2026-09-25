@@ -35,6 +35,8 @@ services:
       # IP fixo do nginx (serviço web): só dele o X-Forwarded-For é aceito (DECISOES_FUNDACAO §14.6).
       TRUST_PROXY: 172.29.254.10
       DATA_DIR: /app/data
+      # Local em http: o cookie de sessão não pode exigir HTTPS. Em produção (HTTPS), true (DECISOES_FUNDACAO §8.4).
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     volumes:
       # Dados do desafio montados só para leitura: o seed não consegue alterá-los (DECISOES_FUNDACAO §1b).
       - ./data:/app/data:ro

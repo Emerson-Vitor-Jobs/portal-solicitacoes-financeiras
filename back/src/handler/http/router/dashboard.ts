@@ -19,7 +19,7 @@ export function dashboardRoutes(app: FastifyInstance, deps: DashboardRouteDeps):
       summary: 'Indicadores (escopo pelo perfil)',
       description: 'REQUESTER: só as próprias solicitações. FINANCE: todas.',
       security: SESSION,
-      response: { 200: dashboardSummarySchema, 401: errors[401], 501: errors[501] },
+      response: { 200: dashboardSummarySchema, 401: errors[401] },
     },
     onRequest: authenticate(deps.auth),
     handler: (request) => deps.controller.summary(sessionUser(request)),

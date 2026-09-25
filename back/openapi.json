@@ -84,8 +84,7 @@
               "DUPLICATE_INVOICE",
               "INVALID_TRANSITION",
               "TOO_MANY_REQUESTS",
-              "INTERNAL",
-              "NOT_IMPLEMENTED"
+              "INTERNAL"
             ]
           },
           "errors": {
@@ -531,8 +530,7 @@
               "DUPLICATE_INVOICE",
               "INVALID_TRANSITION",
               "TOO_MANY_REQUESTS",
-              "INTERNAL",
-              "NOT_IMPLEMENTED"
+              "INTERNAL"
             ]
           },
           "errors": {
@@ -1067,16 +1065,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "Rota do contrato ainda não implementada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
           }
         }
       }
@@ -1116,16 +1104,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "Rota do contrato ainda não implementada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
           }
         }
       }
@@ -1154,16 +1132,6 @@
           },
           "401": {
             "description": "Sessão ausente/expirada ou credenciais inválidas",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Rota do contrato ainda não implementada",
             "content": {
               "application/json": {
                 "schema": {
@@ -1273,16 +1241,6 @@
           },
           "422": {
             "description": "Dados inválidos (erro por campo em `errors`)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Rota do contrato ainda não implementada",
             "content": {
               "application/json": {
                 "schema": {
@@ -1430,16 +1388,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "Rota do contrato ainda não implementada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
           }
         }
       }
@@ -1488,16 +1436,6 @@
           },
           "404": {
             "description": "Não encontrado, de outra pessoa ou id inválido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Rota do contrato ainda não implementada",
             "content": {
               "application/json": {
                 "schema": {
@@ -1646,16 +1584,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "Rota do contrato ainda não implementada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
           }
         }
       }
@@ -1779,16 +1707,6 @@
                 }
               }
             }
-          },
-          "501": {
-            "description": "Rota do contrato ainda não implementada",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
           }
         }
       }
@@ -1818,16 +1736,6 @@
           },
           "401": {
             "description": "Sessão ausente/expirada ou credenciais inválidas",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Rota do contrato ainda não implementada",
             "content": {
               "application/json": {
                 "schema": {

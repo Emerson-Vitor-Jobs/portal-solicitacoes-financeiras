@@ -138,15 +138,6 @@ export interface paths {
                         "application/json": components["schemas"]["Problem"];
                     };
                 };
-                /** @description Rota do contrato ainda não implementada */
-                501: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Problem"];
-                    };
-                };
             };
         };
         delete?: never;
@@ -202,15 +193,6 @@ export interface paths {
                         "application/json": components["schemas"]["Problem"];
                     };
                 };
-                /** @description Rota do contrato ainda não implementada */
-                501: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Problem"];
-                    };
-                };
             };
         };
         delete?: never;
@@ -247,15 +229,6 @@ export interface paths {
                 };
                 /** @description Sessão ausente/expirada ou credenciais inválidas */
                 401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Problem"];
-                    };
-                };
-                /** @description Rota do contrato ainda não implementada */
-                501: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -322,15 +295,6 @@ export interface paths {
                 };
                 /** @description Dados inválidos (erro por campo em `errors`) */
                 422: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Problem"];
-                    };
-                };
-                /** @description Rota do contrato ainda não implementada */
-                501: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -426,15 +390,6 @@ export interface paths {
                         "application/json": components["schemas"]["Problem"];
                     };
                 };
-                /** @description Rota do contrato ainda não implementada */
-                501: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Problem"];
-                    };
-                };
             };
         };
         delete?: never;
@@ -482,15 +437,6 @@ export interface paths {
                 };
                 /** @description Não encontrado, de outra pessoa ou id inválido */
                 404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Problem"];
-                    };
-                };
-                /** @description Rota do contrato ainda não implementada */
-                501: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -606,15 +552,6 @@ export interface paths {
                         "application/json": components["schemas"]["Problem"];
                     };
                 };
-                /** @description Rota do contrato ainda não implementada */
-                501: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Problem"];
-                    };
-                };
             };
         };
         delete?: never;
@@ -721,15 +658,6 @@ export interface paths {
                         "application/json": components["schemas"]["Problem"];
                     };
                 };
-                /** @description Rota do contrato ainda não implementada */
-                501: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Problem"];
-                    };
-                };
             };
         };
         delete?: never;
@@ -776,15 +704,6 @@ export interface paths {
                         "application/json": components["schemas"]["Problem"];
                     };
                 };
-                /** @description Rota do contrato ainda não implementada */
-                501: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Problem"];
-                    };
-                };
             };
         };
         put?: never;
@@ -816,7 +735,7 @@ export interface components {
             status: number;
             detail: string;
             /** @enum {string} */
-            code: "VALIDATION_FAILED" | "INVALID_CREDENTIALS" | "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "DUPLICATE_INVOICE" | "INVALID_TRANSITION" | "TOO_MANY_REQUESTS" | "INTERNAL" | "NOT_IMPLEMENTED";
+            code: "VALIDATION_FAILED" | "INVALID_CREDENTIALS" | "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "DUPLICATE_INVOICE" | "INVALID_TRANSITION" | "TOO_MANY_REQUESTS" | "INTERNAL";
             errors?: {
                 field: string;
                 message: string;
@@ -942,7 +861,7 @@ export interface components {
             status: number;
             detail: string;
             /** @enum {string} */
-            code: "VALIDATION_FAILED" | "INVALID_CREDENTIALS" | "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "DUPLICATE_INVOICE" | "INVALID_TRANSITION" | "TOO_MANY_REQUESTS" | "INTERNAL" | "NOT_IMPLEMENTED";
+            code: "VALIDATION_FAILED" | "INVALID_CREDENTIALS" | "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND" | "DUPLICATE_INVOICE" | "INVALID_TRANSITION" | "TOO_MANY_REQUESTS" | "INTERNAL";
             errors?: {
                 field: string;
                 message: string;

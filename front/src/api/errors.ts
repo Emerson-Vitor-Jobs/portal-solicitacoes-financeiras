@@ -82,8 +82,6 @@ export function errorMessage(error: unknown): string {
       return tooManyRequestsMessage(error.retryAfterSeconds);
     case 'INTERNAL':
       return 'Erro interno do servidor. Tente novamente em instantes.';
-    case 'NOT_IMPLEMENTED':
-      return 'Esta função ainda não está disponível no servidor.';
   }
   // O tipo garante os códigos do contrato, mas um servidor mais novo pode mandar um código que este
   // build não conhece: a mensagem nunca fica vazia.

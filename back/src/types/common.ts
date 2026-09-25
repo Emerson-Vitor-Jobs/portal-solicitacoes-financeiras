@@ -36,8 +36,6 @@ export const PROBLEM_CODES = [
   'INVALID_TRANSITION',
   'TOO_MANY_REQUESTS',
   'INTERNAL',
-  // Só enquanto uma rota do contrato ainda não foi implementada.
-  'NOT_IMPLEMENTED',
 ] as const;
 export type ProblemCode = (typeof PROBLEM_CODES)[number];
 

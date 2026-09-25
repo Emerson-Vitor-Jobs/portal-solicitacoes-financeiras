@@ -9,7 +9,6 @@ export const errors = {
   409: problemSchema.describe('Nota duplicada ou transição inválida'),
   422: problemSchema.describe('Dados inválidos (erro por campo em `errors`)'),
   429: problemSchema.describe('Muitas tentativas de login'),
-  501: problemSchema.describe('Rota do contrato ainda não implementada'),
 } as const;
 
 // Requisições que mudam estado exigem este header (DECISOES_FUNDACAO §8.3).
