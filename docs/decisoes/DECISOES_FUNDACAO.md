@@ -545,8 +545,9 @@ Fonte primária: Receita Federal, IN RFB nº 2.229/2024 e o documento
 
 **Implementação:**
 - `normalizeCnpj`: remove `.`, `/`, `-` e espaços, depois converte para maiúscula.
-- `isValidCnpj`: 14 posições, `^[0-9A-Z]{12}[0-9]{2}$`, DV correto, e rejeita os 14 caracteres iguais
-  (`00000000000000`, `11111111111111`… que passam no módulo 11 mas não são CNPJ).
+- `isValidCnpj`: 14 posições, `^[0-9A-Z]{12}[0-9]{2}$`, DV correto, e rejeita os 14 caracteres iguais.
+  Dos 14 caracteres iguais, só `00000000000000` passa no módulo 11 (os demais já falham no DV); a regra existe para
+  barrar esse caso e deixar explícito que sequência repetida não é CNPJ.
 - Banco: `supplier_cnpj TEXT NOT NULL CHECK (supplier_cnpj ~ '^[0-9A-Z]{12}[0-9]{2}$')` (substitui a regex
   numérica citada na 6.0).
 - Front: a máscara `AA.AAA.AAA/AAAA-00` aceita letras e converte para maiúscula enquanto digita.
@@ -801,7 +802,7 @@ escopo tem.
 ### 16.1 Ports and Adapters: onde entra e onde não entra
 | Lado | Hexagonal completo | Este projeto |
 | --- | --- | --- |
-| **Saída** (driven: banco) | porta + adaptador | ✅ o service declara a interface de que precisa (**a porta**, ex.: `RequestRepository`) no próprio arquivo; o `*_storage.ts` com PgTyped a implementa (**o adaptador**); o `main.ts` liga um no outro |
+| **Saída** (driven: banco) | porta + adaptador | ✅ o service declara a interface de que precisa (**a porta**, ex.: `RequestRepository`) no próprio arquivo; o `*_storage.ts` com PgTyped a implementa (**o adaptador**); o `app.ts` (`buildApp`) liga um no outro |
 | **Entrada** (driving: HTTP) | porta de entrada (interface de caso de uso) chamada por vários adaptadores | ❌ o controller (adaptador HTTP) chama o **service concreto** |
 | **Modelo** | entidade de domínio separada do DTO, com mapeamento nas duas direções | tipos de domínio em `types/`, com conversão só nas bordas (§3) |
 | **Organização** | pastas `ports/`, `adapters/`, `domain/` | camadas `handler/`, `service/`, `repository/` |
@@ -832,7 +833,7 @@ persiste), que é o que se procura ao ler e ao avaliar. As portas vivem junto do
 | Padrão | Onde | Por quê |
 | --- | --- | --- |
 | **Layered Architecture** (controller → service → repository) | a estrutura de pastas | Cada camada tem uma responsabilidade só: gatilho, regra, persistência |
-| **Composition Root** + injeção manual (Seemann) | `main.ts` | Todo o grafo de dependências visível num lugar, sem container de DI nem mágica |
+| **Composition Root** + injeção manual (Seemann) | `app.ts` (`buildApp`) | Todo o grafo de dependências visível num lugar, sem container de DI nem mágica |
 | **Repository** (Fowler) | `*_storage.ts` | O service pede "dados de negócio", não escreve SQL |
 | **Unit of Work** (Fowler), pela porta `inTransaction(fn)` | `RequestRepository.inTransaction` | O service decide *o que* é atômico (UPDATE + auditoria); o adaptador decide *como* (BEGIN/COMMIT/ROLLBACK). A atomicidade fica na regra sem o service importar o banco |
 | **Transaction Script** (Fowler) | cada caso de uso do service | O domínio é um fluxo com poucas regras. Um Domain Model rico (DDD, agregados) seria exagero pra esse escopo |

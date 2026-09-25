@@ -57,8 +57,9 @@ Não abra uma issue pública. Escreva para **emerson@risilva.com**, com os passo
 - Cada requisição gera uma linha com campos fixos: `request_id`, `user_id`, `method`, `route` (o padrão, sem query
   string), `status` e `duration_ms`.
 - Nunca entram no log: corpo, senha, cookie, `Authorization`, SQL, parâmetros de SQL, valores, CNPJ ou nota.
-- Erro de banco é reduzido a `{ name, code }`, porque o `detail` de um `23505` traria o CNPJ e a nota. Um teste provoca
-  esse erro e confere que o log não contém nenhum dos dois. O `redact` do pino fica como segunda camada.
+- Erro de banco é reduzido a `{ name, code }`, porque o `detail` de um `23505` traria o CNPJ e a nota. Um teste de
+  integração (`flow.integration.test.ts`) provoca um `23505` real no PostgreSQL e confere que o log não contém nenhum
+  dos dois. O `redact` do pino fica como segunda camada.
 - Erros inesperados respondem 500 genérico, e a mensagem interna nunca chega ao cliente.
 
 ### Headers HTTP

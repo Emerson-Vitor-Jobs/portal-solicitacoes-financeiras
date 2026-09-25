@@ -62,7 +62,7 @@ docker compose --profile test run --rm back-test    # API: unitários + integra�
 docker compose --profile test run --rm front-test   # front: lógica e componentes
 ```
 
-280 testes: 148 no back (116 unitários + 32 de integração) e 132 no front. O `back-test` usa um banco próprio
+283 testes: 151 no back (119 unitários + 32 de integração) e 132 no front. O `back-test` usa um banco próprio
 (`gex_finance_it`) e nunca toca nos dados do app. `make test` roda os dois (o `Makefile` só tem atalhos para esses
 comandos, mais `make up` e `make reset`). Sem Docker: `npm test` em `front/`; em `back/`, `npm run test:unit` e
 `npm run test:integration` (este precisa do Postgres do compose no ar).

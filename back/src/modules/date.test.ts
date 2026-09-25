@@ -67,8 +67,9 @@ describe('#12 date edges', () => {
     expect(endOfDaySaoPaulo('2018-11-03').getTime()).toBe(start.getTime());
   });
 
-  test('DST end (repeated midnight): starts at the first 00:00, still at -02:00', () => {
+  test('DST end (23:00 of 02-16 repeats): 02-17 starts at 00:00 -03:00', () => {
     const start = startOfDaySaoPaulo('2019-02-17');
+    expect(start.toISOString()).toBe('2019-02-17T03:00:00.000Z');
     expect(businessDateOf(start)).toBe('2019-02-17');
     expect(businessDateOf(new Date(start.getTime() - 1))).toBe('2019-02-16');
   });

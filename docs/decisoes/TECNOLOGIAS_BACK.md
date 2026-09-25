@@ -30,7 +30,8 @@ back/src/
 │   ├── router/            rotas + hooks (auth, requireRole)
 │   └── errors.ts          único mapeador erro de domínio → status HTTP
 ├── modules/               blocos puros reutilizáveis (money, cnpj, date)
-└── main.ts                composition root: injeção manual + mustGetEnv()
+├── app.ts                 composition root: injeção manual (buildApp)
+└── main.ts                processo: lê a config, cria o pool, sobe o servidor, trata SIGTERM
 ```
 
 - Controller não tem regra de negócio: só valida o input, chama o service e responde.
