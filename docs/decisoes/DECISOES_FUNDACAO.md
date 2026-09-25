@@ -845,3 +845,43 @@ ORM / Active Record (§12) · container de DI · CQRS · Event Sourcing · DDD t
 parte) · hexagonal completo com porta de entrada. Todos resolvem problemas de escala, de domínio complexo ou de
 múltiplos gatilhos. **O escopo deste projeto (1 gatilho, 3 entidades, 1 banco) não tem esses problemas**, e o
 enunciado pede explicitamente uma solução pequena e fácil de entender.
+
+## 17. Sistema visual do front — FECHADA
+
+**Referência:** [EasyPay: E-Wallet Digital Payment App](https://www.figma.com/community/file/1146678238901785717/easypay-e-wallet-digital-payment-app),
+de Nickelfox, na Figma Community (licença **CC BY 4.0**, com crédito no README). Lido pelas variáveis e telas do arquivo.
+
+**Adaptação, não cópia:** o EasyPay é um app de celular, e o portal é web de desktop, com tabela, filtros e formulários.
+Aplicamos o **sistema visual** (paleta, tipografia, hierarquia, estilo de cards e botões) e mantemos os layouts próprios
+do portal. Toda a identidade mora em `front/src/theme.ts` (tema do Mantine); os componentes só consomem o tema.
+
+| Elemento | No portal |
+| --- | --- |
+| Cor de ação | preto `#0B0A0A` (botões principais, item ativo do menu); secundário com contorno |
+| Marca | creme `#F9EFE5`: faixa do topo, fundo do login, bloco do valor no detalhe |
+| Superfícies | fundo `#F8F8F8`, conteúdo em cards brancos com borda `#E0E0E0` |
+| Destaque | o "Total pendente" do painel em card escuro (o equivalente do card de saldo) |
+| Status | pastéis do Figma com texto escuro (`autoContrast`): Pendente `#FFF2CF`, Aprovada `#BCE2FE`, Paga `#D6FFDC`, Rejeitada `#FCB3C5` |
+| Alerta | "Vencida" e "Rejeitar" em vermelho escuro `#B42318` (contraste AA com branco): o único alerta forte |
+| Tipografia | IBM Plex Sans (500/600) nos títulos, Roboto (400/500) no corpo, via `@fontsource` (empacotadas no build, **sem depender de internet**) |
+| Texto de apoio | `#595F67` (passa AA sobre branco), no lugar do cinza claro padrão |
+
+**Ilustrações: Open Doodles (CC0), não as do arquivo.** As ilustrações do Figma são do pacote "Indian Doodle"
+(Varun Trivedi / IconScout). A licença gratuita do IconScout **proíbe redistribuir os arquivos**, e o repositório da
+entrega é clonado pelo avaliador. No lugar delas usamos [Open Doodles](https://www.opendoodles.com/about), de Pablo
+Stanley, no mesmo estilo de traço preto e com licença **CC0** (uso, edição e redistribuição livres). O rosa original foi
+trocado pelas cores da paleta. Ficam em `front/src/assets/doodles/`, com um `LICENSE.md`. São usadas no login e no estado
+vazio da lista.
+
+**UX, além da cor:**
+- O painel explica cada número numa linha ("Aguardando aprovação ou rejeição"…).
+- O detalhe destaca o valor e o vencimento no topo, como o total de um recibo.
+- O formulário tem dicas nos campos que geram dúvida (CNPJ alfanumérico, valor digitado da direita pra esquerda,
+  competência).
+- Nomes de fornecedor em negrito como link (não só pela cor, WCAG 1.4.1).
+- A tabela não corta nem quebra colunas: sem espaço, ganha rolagem horizontal.
+- O estado vazio tem ilustração, título e o motivo.
+
+**Por quê:** o enunciado dá 20% da nota a "frontend e experiência de uso". Concentrar a identidade no tema mantém a
+mudança **só visual**: nenhuma regra, rota ou contrato mudou, e os testes continuaram passando (só duas asserções de
+descrição acessível foram ajustadas, porque agora incluem a dica do campo).

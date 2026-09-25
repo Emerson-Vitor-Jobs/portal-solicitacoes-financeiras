@@ -4,7 +4,8 @@ import { Badge } from '@mantine/core';
 export function OverdueBadge({ overdue }: { overdue: boolean }) {
   if (!overdue) return null;
   return (
-    <Badge color="red" variant="filled" size="sm">
+    // Vermelho escuro (contraste AA com texto branco): o único alerta forte da tela, pra não competir com os status.
+    <Badge color="#B42318" variant="filled" size="sm">
       Vencida
     </Badge>
   );

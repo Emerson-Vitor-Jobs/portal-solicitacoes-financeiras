@@ -21,6 +21,7 @@ import { formatCnpj } from '../../lib/cnpj';
 import { formatBusinessDate, formatCompetence, formatInstant } from '../../lib/date';
 import { CATEGORY_LABELS, STATUS_LABELS } from '../../lib/labels';
 import { formatCents } from '../../lib/money';
+import { palette } from '../../theme';
 import { useSession } from '../auth/session';
 import { ApproveModal, MarkPaidModal, RejectModal } from './ActionModals';
 import { availableActions, type RequestAction } from './actions';
@@ -29,7 +30,7 @@ import { fetchRequest, requestKeys, type RequestDetail } from './api';
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <Text size="xs" c="dimmed" component="dt">
+      <Text size="xs" c={palette.textSecondary} component="dt">
         {label}
       </Text>
       <Text component="dd" m={0}>
@@ -46,14 +47,8 @@ function RequestData({ request }: { request: RequestDetail }) {
         <Field label="Fornecedor">{request.supplier_name}</Field>
         <Field label="CNPJ">{formatCnpj(request.supplier_cnpj)}</Field>
         <Field label="Nota fiscal">{request.invoice_number}</Field>
-        <Field label="Valor">{formatCents(request.amount_cents)}</Field>
         <Field label="Competência">{formatCompetence(request.competence)}</Field>
-        <Field label="Vencimento">
-          <Group gap="xs" component="span">
-            {formatBusinessDate(request.due_date)}
-            <OverdueBadge overdue={request.is_overdue} />
-          </Group>
-        </Field>
+        <Field label="Vencimento">{formatBusinessDate(request.due_date)}</Field>
         <Field label="Categoria">{CATEGORY_LABELS[request.category]}</Field>
         <Field label="Solicitante">{request.requester.name}</Field>
         <Field label="Status">
@@ -111,10 +106,14 @@ function History({ request }: { request: RequestDetail }) {
   );
 }
 
-const ACTION_BUTTONS: Record<RequestAction, { label: string; color: string }> = {
-  approve: { label: 'Aprovar', color: 'blue' },
-  reject: { label: 'Rejeitar', color: 'red' },
-  markPaid: { label: 'Marcar como pago', color: 'green' },
+// Ação principal em preto (a cor de ação do sistema visual, §17); rejeitar é destrutiva, em vermelho com contorno.
+const ACTION_BUTTONS: Record<
+  RequestAction,
+  { label: string; color: string; variant: 'filled' | 'outline' }
+> = {
+  approve: { label: 'Aprovar', color: 'ink', variant: 'filled' },
+  reject: { label: 'Rejeitar', color: '#B42318', variant: 'outline' },
+  markPaid: { label: 'Marcar como pago', color: 'ink', variant: 'filled' },
 };
 
 export function RequestDetailPage() {
@@ -178,6 +177,7 @@ export function RequestDetailPage() {
               <Button
                 key={action}
                 color={ACTION_BUTTONS[action].color}
+                variant={ACTION_BUTTONS[action].variant}
                 onClick={() => setOpenAction(action)}
               >
                 {ACTION_BUTTONS[action].label}
@@ -193,10 +193,36 @@ export function RequestDetailPage() {
         </Alert>
       )}
 
+      {/* O valor em destaque, como o total do recibo no sistema visual (§17). */}
+      <Card bg={palette.cream} withBorder={false}>
+        <Group justify="space-between" align="flex-end" wrap="wrap">
+          <div>
+            <Text size="sm" c={palette.textSecondary}>
+              Valor
+            </Text>
+            <Text fz={32} fw={600} ff="heading" lh={1.2}>
+              {formatCents(request.amount_cents)}
+            </Text>
+          </div>
+          <Group gap="xs">
+            <Text size="sm" c={palette.textSecondary}>
+              Vencimento {formatBusinessDate(request.due_date)}
+            </Text>
+            <OverdueBadge overdue={request.is_overdue} />
+          </Group>
+        </Group>
+      </Card>
+
       <RequestData request={request} />
 
-      <Title order={3}>Histórico</Title>
-      <History request={request} />
+      <Card>
+        <Stack>
+          <Title order={3} size="h4">
+            Histórico
+          </Title>
+          <History request={request} />
+        </Stack>
+      </Card>
 
       {openAction === 'approve' && <ApproveModal request={request} onClose={close} />}
       {openAction === 'reject' && <RejectModal request={request} onClose={close} />}

@@ -1,4 +1,14 @@
-import { AppShell, Badge, Burger, Button, Group, NavLink, Text, Title } from '@mantine/core';
+import {
+  AppShell,
+  Badge,
+  Burger,
+  Button,
+  Center,
+  Group,
+  NavLink,
+  Text,
+  Title,
+} from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,6 +17,25 @@ import { errorMessage } from '../api/errors';
 import { logout } from '../features/auth/api';
 import { useSession } from '../features/auth/session';
 import { ROLE_LABELS } from '../lib/labels';
+import { palette } from '../theme';
+
+// Marca: um círculo preto com o "R$", no traço simples do sistema visual. Decorativa (o título ao lado já nomeia).
+function BrandMark() {
+  return (
+    <Center
+      aria-hidden
+      w={32}
+      h={32}
+      bg={palette.ink}
+      c="white"
+      fw={600}
+      fz="xs"
+      style={{ borderRadius: '50%', flexShrink: 0 }}
+    >
+      R$
+    </Center>
+  );
+}
 
 type MenuItem = { to: string; label: string; end?: boolean };
 
@@ -40,23 +69,30 @@ export function AppLayout() {
 
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: 64 }}
       navbar={{ width: 240, breakpoint: 'sm', collapsed: { mobile: !opened } }}
-      padding="md"
+      padding="lg"
+      styles={{ main: { backgroundColor: palette.background } }}
     >
-      <AppShell.Header>
+      {/* Faixa creme da marca no topo, como nas telas do sistema visual (§17). */}
+      <AppShell.Header bg={palette.cream} withBorder={false}>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           <Group wrap="nowrap">
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label="Menu" />
-            <Title order={1} size="h4">
-              Portal de Solicitações Financeiras
-            </Title>
+            <Group gap="xs" wrap="nowrap">
+              <BrandMark />
+              <Title order={1} size="h4" lh={1.2}>
+                Portal de Solicitações Financeiras
+              </Title>
+            </Group>
           </Group>
           <Group wrap="nowrap" gap="sm">
             <Text size="sm" visibleFrom="sm">
               {user.name}
             </Text>
-            <Badge variant="light">{ROLE_LABELS[user.role]}</Badge>
+            <Badge variant="outline" color="ink">
+              {ROLE_LABELS[user.role]}
+            </Badge>
             <Button
               variant="default"
               size="xs"

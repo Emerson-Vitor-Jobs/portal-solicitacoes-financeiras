@@ -66,7 +66,7 @@ export function ApproveModal({ request, onClose }: ModalProps) {
             Cancelar
           </Button>
           <Button
-            color="blue"
+            color="ink"
             loading={mutation.isPending}
             disabled={mutation.isPending}
             onClick={() => submit({ decision: 'APPROVE' })}
@@ -126,7 +126,7 @@ export function RejectModal({ request, onClose }: ModalProps) {
             </Button>
             <Button
               type="submit"
-              color="red"
+              color="#B42318"
               loading={mutation.isPending}
               disabled={mutation.isPending}
             >
@@ -234,7 +234,7 @@ export function MarkPaidModal({ request, onClose }: ModalProps) {
             </Button>
             <Button
               type="submit"
-              color="green"
+              color="ink"
               loading={mutation.isPending}
               disabled={mutation.isPending}
             >

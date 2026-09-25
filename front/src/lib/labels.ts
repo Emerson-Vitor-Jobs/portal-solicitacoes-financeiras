@@ -1,4 +1,5 @@
 import type { components } from '../api/schema';
+import { palette } from '../theme';
 
 type Status = components['schemas']['RequestStatus'];
 type Category = components['schemas']['Category'];
@@ -13,11 +14,12 @@ export const STATUS_LABELS: Record<Status, string> = {
   PAID: 'Paga',
 };
 
+// Acentos pastel do sistema visual; o texto escuro por cima vem do autoContrast do tema (§17).
 export const STATUS_COLORS: Record<Status, string> = {
-  PENDING: 'yellow',
-  APPROVED: 'blue',
-  REJECTED: 'red',
-  PAID: 'green',
+  PENDING: palette.yellow,
+  APPROVED: palette.blue,
+  REJECTED: palette.pink,
+  PAID: palette.green,
 };
 
 export const CATEGORY_LABELS: Record<Category, string> = {

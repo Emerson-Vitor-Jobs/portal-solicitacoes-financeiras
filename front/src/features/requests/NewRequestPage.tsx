@@ -130,6 +130,7 @@ export function NewRequestPage() {
                 render={({ field }) => (
                   <CnpjInput
                     label="CNPJ do fornecedor"
+                    description="Com ou sem pontuação; aceita o CNPJ alfanumérico."
                     withAsterisk
                     name={field.name}
                     ref={field.ref}
@@ -141,6 +142,7 @@ export function NewRequestPage() {
               />
               <TextInput
                 label="Número da nota fiscal"
+                description="Como está na nota (ex.: NF-2026-1001)."
                 withAsterisk
                 {...form.register('invoice_number')}
                 error={errors.invoice_number?.message}
@@ -151,6 +153,7 @@ export function NewRequestPage() {
                 render={({ field }) => (
                   <MoneyInput
                     label="Valor"
+                    description="Digite os números: 155313 vira R$ 1.553,13."
                     withAsterisk
                     name={field.name}
                     ref={field.ref}
@@ -167,6 +170,7 @@ export function NewRequestPage() {
                 render={({ field }) => (
                   <MonthPickerInput
                     label="Competência"
+                    description="Mês e ano a que a despesa se refere."
                     withAsterisk
                     placeholder="mm/aaaa"
                     valueFormat="MM/YYYY"
@@ -186,6 +190,7 @@ export function NewRequestPage() {
                 render={({ field }) => (
                   <BusinessDateInput
                     label="Vencimento"
+                    description="Data limite de pagamento."
                     withAsterisk
                     defaultDate={reference_date}
                     name={field.name}
@@ -218,6 +223,7 @@ export function NewRequestPage() {
             </SimpleGrid>
             <Textarea
               label="Descrição"
+              description="Opcional."
               rows={3}
               {...form.register('description')}
               error={errors.description?.message}

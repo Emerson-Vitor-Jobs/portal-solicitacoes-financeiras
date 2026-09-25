@@ -1,11 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Alert,
+  Box,
   Button,
   Center,
+  Image,
   Paper,
   PasswordInput,
+  SimpleGrid,
   Stack,
+  Text,
   TextInput,
   Title,
 } from '@mantine/core';
@@ -14,6 +18,8 @@ import { useForm } from 'react-hook-form';
 import { useLocation, useNavigate } from 'react-router';
 import { z } from 'zod';
 import { errorMessage, hasCode, isApiError, tooManyRequestsMessage } from '../../api/errors';
+import illustration from '../../assets/doodles/sitting-reading.svg';
+import { palette } from '../../theme';
 import { login, sessionQueryKey } from './api';
 import type { LoginLocationState } from './SessionExpiryListener';
 
@@ -65,39 +71,71 @@ export function LoginPage() {
   const { errors } = form.formState;
 
   return (
-    <Center mih="100vh" p="md">
-      <Paper withBorder shadow="sm" p="xl" radius="md" w="100%" maw={420}>
-        <form onSubmit={(event) => void onSubmit(event)} noValidate>
-          <Stack>
-            <Title order={2}>Entrar</Title>
-            {state.expired && !mutation.isError && (
-              <Alert color="yellow">Sua sessão expirou. Entre novamente.</Alert>
-            )}
-            {mutation.isError && (
-              <Alert color="red" role="alert">
-                {loginErrorMessage(mutation.error)}
-              </Alert>
-            )}
-            <TextInput
-              label="E-mail"
-              type="email"
-              autoComplete="username"
-              autoFocus
-              {...form.register('email')}
-              error={errors.email?.message}
-            />
-            <PasswordInput
-              label="Senha"
-              autoComplete="current-password"
-              {...form.register('password')}
-              error={errors.password?.message}
-            />
-            <Button type="submit" loading={mutation.isPending} disabled={mutation.isPending}>
-              Entrar
-            </Button>
-          </Stack>
-        </form>
-      </Paper>
+    // Fundo creme da marca, com a ilustração ao lado do formulário (some em telas estreitas), como a tela de
+    // entrada do sistema visual (§17).
+    <Center mih="100vh" p="md" bg={palette.cream}>
+      <SimpleGrid
+        cols={{ base: 1, md: 2 }}
+        spacing={48}
+        w="100%"
+        maw={960}
+        style={{ alignItems: 'center' }}
+      >
+        <Stack visibleFrom="md" gap="md">
+          <Image src={illustration} alt="" maw={360} />
+          <Title order={1} size="h2">
+            Portal de Solicitações Financeiras
+          </Title>
+          <Text c={palette.textSecondary} maw={380}>
+            Cadastre despesas, acompanhe a aprovação e o pagamento, com o histórico de cada etapa.
+          </Text>
+        </Stack>
+        <Box>
+          <Paper withBorder shadow="sm" p="xl" w="100%" maw={420} mx="auto">
+            <form onSubmit={(event) => void onSubmit(event)} noValidate>
+              <Stack>
+                <Stack gap={4}>
+                  <Title order={2}>Entrar</Title>
+                  <Text size="sm" c={palette.textSecondary}>
+                    Use o e-mail e a senha do seu perfil.
+                  </Text>
+                </Stack>
+                {state.expired && !mutation.isError && (
+                  <Alert color="yellow">Sua sessão expirou. Entre novamente.</Alert>
+                )}
+                {mutation.isError && (
+                  <Alert color="red" role="alert">
+                    {loginErrorMessage(mutation.error)}
+                  </Alert>
+                )}
+                <TextInput
+                  label="E-mail"
+                  type="email"
+                  autoComplete="username"
+                  autoFocus
+                  {...form.register('email')}
+                  error={errors.email?.message}
+                />
+                <PasswordInput
+                  label="Senha"
+                  autoComplete="current-password"
+                  {...form.register('password')}
+                  error={errors.password?.message}
+                />
+                <Button
+                  type="submit"
+                  size="md"
+                  fullWidth
+                  loading={mutation.isPending}
+                  disabled={mutation.isPending}
+                >
+                  Entrar
+                </Button>
+              </Stack>
+            </form>
+          </Paper>
+        </Box>
+      </SimpleGrid>
     </Center>
   );
 }

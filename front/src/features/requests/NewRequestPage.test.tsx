@@ -94,7 +94,7 @@ describe('#10 NewRequestPage', () => {
       screen.getByText('Já existe uma solicitação com este CNPJ e número de nota fiscal.'),
     ).toBeInTheDocument();
     expect(invoice).toHaveAccessibleDescription(
-      'Já existe uma solicitação com este CNPJ e número de nota fiscal.',
+      /Já existe uma solicitação com este CNPJ e número de nota fiscal\./,
     );
     // O botão volta a funcionar para corrigir e reenviar.
     expect(screen.getByRole('button', { name: 'Enviar solicitação' })).toBeEnabled();
@@ -119,7 +119,9 @@ describe('#10 NewRequestPage', () => {
     await user.click(screen.getByRole('button', { name: 'Enviar solicitação' }));
 
     expect(await screen.findByText('CNPJ com dígito verificador inválido.')).toBeInTheDocument();
-    expect(screen.getByLabelText(/Valor/)).toHaveAccessibleDescription('Valor acima do permitido.');
+    expect(screen.getByLabelText(/Valor/)).toHaveAccessibleDescription(
+      /Valor acima do permitido\./,
+    );
   });
 
   test('valida a forma antes de enviar (nada vai para a API)', async () => {

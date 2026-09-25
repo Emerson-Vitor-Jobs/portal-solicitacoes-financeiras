@@ -6,7 +6,11 @@ type Status = components['schemas']['RequestStatus'];
 
 export function StatusBadge({ status }: { status: Status }) {
   return (
-    <Badge color={STATUS_COLORS[status]} variant="light">
+    <Badge
+      color={STATUS_COLORS[status]}
+      variant="filled"
+      style={{ flexShrink: 0, overflow: 'visible' }}
+    >
       {STATUS_LABELS[status]}
     </Badge>
   );
