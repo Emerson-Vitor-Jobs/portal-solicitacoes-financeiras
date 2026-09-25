@@ -447,6 +447,21 @@ Fontes: OWASP [Session Management](https://cheatsheetseries.owasp.org/cheatsheet
 - Avaliador (só Docker): `docker compose --profile test run --rm back-test` e `… front-test`.
 - Local: `npm test` em `back/` e `front/` (com `DATABASE_URL` pro back).
 
+### 9.4.1 Detalhes do compose (definidos na implementação)
+- **`APP_TODAY` com default `2026-09-18` no compose**, usando `${APP_TODAY-2026-09-18}` (sem `:`). Sem `.env`, a
+  avaliação é reproduzível logo no primeiro `up` e o dashboard bate com o esperado. Com `APP_TODAY=` (vazia), a API usa
+  a data atual em `America/Sao_Paulo`, como o enunciado pede quando a variável não está definida.
+- **dbmate × TLS:** o dbmate (lib/pq) exige TLS por padrão, e o Postgres local não tem. O entrypoint acrescenta
+  `sslmode=disable` na URL **só do dbmate** quando a URL não define `sslmode`. É o mesmo comportamento do driver `pg`
+  da API, e o `DATABASE_URL` do `.env.example` original continua funcionando sem alteração.
+- **Migrations numeradas em sequência** (`00001_…sql`), com `-- migrate:up` / `-- migrate:down`, e
+  `--no-dump-schema` (sem gerar `schema.sql`, porque o schema de verdade são as próprias migrations).
+- **Rede interna fixa** `172.29.254.0/24` com o nginx em `172.29.254.10`, o único IP em que a API confia pro
+  `X-Forwarded-For` (§14.6). Verificado: um `X-Forwarded-For` forjado é ignorado tanto pelo nginx quanto direto na 3001.
+- **O Node trata o SIGTERM** (fecha o servidor e o pool): como PID 1 no container, sem handler ele ignoraria o sinal e o
+  `docker compose down` esperaria o timeout.
+- `name: gex` fixo no compose: o nome dos volumes não depende do nome da pasta clonada.
+
 ### 9.5 Política de testes: cobertura por comportamento, não por porcentagem
 
 **Não perseguimos 100% de cobertura, nem uma meta numérica.** A cobertura (Vitest + v8) é **medida e reportada**

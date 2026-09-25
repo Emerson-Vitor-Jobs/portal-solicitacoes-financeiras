@@ -1,0 +1,88 @@
+# Sobe tudo com `docker compose up --build`. Testes: `docker compose --profile test run --rm back-test`
+# (e `front-test`). Todas as variáveis têm default; o .env só é necessário para sobrescrever.
+name: gex
+
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gex_finance_test}
+      POSTGRES_USER: ${POSTGRES_USER:-gex}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gex_local_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [app]
+
+  api:
+    build:
+      context: ./back
+      target: runtime
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://gex:gex_local_password@postgres:5432/gex_finance_test}
+      # Sem ":" de propósito: se APP_TODAY não existir, usa 2026-09-18 (avaliação reproduzível);
+      # se existir vazia (APP_TODAY=), a API usa a data atual em America/Sao_Paulo.
+      APP_TODAY: ${APP_TODAY-2026-09-18}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
+      API_PORT: "3001"
+      # IP fixo do nginx (serviço web): só dele o X-Forwarded-For é aceito (DECISOES_FUNDACAO §14.6).
+      TRUST_PROXY: 172.29.254.10
+    ports:
+      - "${API_PORT:-3001}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/api/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [app]
+
+  web:
+    build:
+      context: ./front
+      target: runtime
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      app:
+        ipv4_address: 172.29.254.10
+
+  back-test:
+    profiles: [test]
+    build:
+      context: ./back
+      target: test
+    environment:
+      # Banco próprio dos testes, criado por docker/postgres/init/01-test-db.sql (DECISOES_FUNDACAO §9.3).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gex}:${POSTGRES_PASSWORD:-gex_local_password}@postgres:5432/gex_finance_it
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [app]
+
+  front-test:
+    profiles: [test]
+    build:
+      context: ./front
+      target: test
+
+networks:
+  app:
+    ipam:
+      config:
+        - subnet: 172.29.254.0/24
+
+volumes:
+  postgres_data:
