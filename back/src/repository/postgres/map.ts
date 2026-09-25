@@ -20,3 +20,11 @@ export function toSafeInteger(value: string): number {
   if (!Number.isSafeInteger(n)) throw new Error('inteiro fora da faixa segura vindo do banco');
   return n;
 }
+
+export function toCompetenceDate(competence: string): string {
+  return `${competence}-01`;
+}
+
+export function fromCompetenceDate(date: string): string {
+  return date.slice(0, 7);
+}

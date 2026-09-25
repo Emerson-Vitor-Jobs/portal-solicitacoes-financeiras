@@ -7,6 +7,7 @@ import {
   sessionCookieOf,
 } from '../../../../test/support/server.js';
 import { ANA, FERNANDA } from '../../../../test/support/users.js';
+import { SESSION_COOKIE } from '../session.js';
 
 let app: FastifyInstance | undefined;
 afterEach(async () => {
@@ -30,7 +31,7 @@ describe('POST /api/auth/login', () => {
     expect(res.json()).toEqual({
       user: { id: FERNANDA.id, name: FERNANDA.name, email: FERNANDA.email, role: 'FINANCE' },
     });
-    const sid = res.cookies.find((c) => c.name === 'sid');
+    const sid = res.cookies.find((c) => c.name === SESSION_COOKIE);
     expect(sid).toMatchObject({ httpOnly: true, sameSite: 'Strict', path: '/' });
     expect(res.headers['cache-control']).toBe('no-store');
   });
@@ -159,7 +160,7 @@ describe('GET /api/auth/me e POST /api/auth/logout', () => {
     });
     expect(res.statusCode).toBe(204);
     expect(res.body).toBe('');
-    const cleared = res.cookies.find((c) => c.name === 'sid');
+    const cleared = res.cookies.find((c) => c.name === SESSION_COOKIE);
     expect(cleared?.value).toBe('');
     const me = await app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } });
     expect(me.statusCode).toBe(401);

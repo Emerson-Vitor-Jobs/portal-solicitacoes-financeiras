@@ -3,6 +3,7 @@ import { LogCapture } from '../../../test/support/log_capture.js';
 import { CSRF, buildTestServer, loginAs } from '../../../test/support/server.js';
 import { ANA } from '../../../test/support/users.js';
 import { serializeError } from './logging.js';
+import { SESSION_COOKIE } from './session.js';
 
 describe('política de log (§14.5)', () => {
   test('erro de banco vira só { name, code }: detail, where e valores ficam de fora', () => {
@@ -38,7 +39,7 @@ describe('política de log (§14.5)', () => {
     const text = logs.text;
     expect(text).not.toContain(ANA.password);
     expect(text).not.toContain('senha-errada-no-log');
-    expect(text).not.toContain(cookie.slice('sid='.length));
+    expect(text).not.toContain(cookie.slice(`${SESSION_COOKIE}=`.length));
     expect(text).not.toContain('segredo');
 
     const requests = logs.entries().filter((e) => e.msg === 'request completed');

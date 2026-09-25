@@ -1,12 +1,13 @@
 // App HTTP montado com fakes (sem banco), para os testes com app.inject().
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
+import type { LoginRateLimit } from '../../src/config.js';
 import { AuthController } from '../../src/handler/http/controller/auth.js';
 import { DashboardController } from '../../src/handler/http/controller/dashboard.js';
 import { RequestController } from '../../src/handler/http/controller/requests.js';
 import type { LogStream } from '../../src/handler/http/logging.js';
 import type { HealthDeps } from '../../src/handler/http/router/health.js';
-import type { LoginRateLimit } from '../../src/handler/http/router/hooks.js';
 import { buildServer } from '../../src/handler/http/server.js';
+import { CSRF_HEADER, CSRF_VALUE, SESSION_COOKIE } from '../../src/handler/http/session.js';
 import { AuthService } from '../../src/service/auth.js';
 import {
   DashboardService,
@@ -17,7 +18,7 @@ import { RequestService } from '../../src/service/requests.js';
 import { FakeAuthRepository, fakeHash, fakeVerifyPassword } from './fake_auth.js';
 import { FakeRequestRepository } from './fake_requests.js';
 
-export const CSRF = { 'x-requested-with': 'gex-web' } as const;
+export const CSRF = { [CSRF_HEADER]: CSRF_VALUE };
 
 // Limites altos: os testes que não são do rate limit logam várias vezes com o mesmo e-mail.
 export const RELAXED_RATE_LIMIT: LoginRateLimit = { perEmail: 1000, perIp: 1000, windowMs: 60_000 };
@@ -100,7 +101,7 @@ export async function loginAs(
 }
 
 export function sessionCookieOf(res: LightMyRequestResponse): string {
-  const sid = res.cookies.find((c) => c.name === 'sid');
+  const sid = res.cookies.find((c) => c.name === SESSION_COOKIE);
   if (!sid) throw new Error('resposta sem cookie sid');
-  return `sid=${sid.value}`;
+  return `${SESSION_COOKIE}=${sid.value}`;
 }

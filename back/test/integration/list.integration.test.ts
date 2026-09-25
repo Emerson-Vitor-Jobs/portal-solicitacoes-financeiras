@@ -1,6 +1,7 @@
 // GET /api/requests sobre o seed oficial: filtros e paginação no banco, escopo por papel (§4b, §7.3).
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import type { SeedRequest } from '../../src/repository/postgres/seed_data.js';
 import { readDataFile } from '../support/data.js';
 import { seedOfficialData, testPool } from '../support/db.js';
 import { VALID_REQUEST, http } from '../support/http.js';
@@ -22,12 +23,6 @@ interface ListBody {
   total: number;
   total_pages: number;
   reference_date: string;
-}
-interface SeedRequest {
-  id: string;
-  requester_id: string;
-  due_date: string;
-  created_at: string;
 }
 
 let app: FastifyInstance;

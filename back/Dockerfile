@@ -25,7 +25,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-fund --no-audit
 COPY --from=build /app/dist ./dist
 COPY src/repository/postgres/migrations ./migrations
-COPY docker/entrypoint.sh ./entrypoint.sh
+COPY docker/entrypoint.sh docker/dbmate_url.sh ./
 USER node
 EXPOSE 3001
 ENTRYPOINT ["./entrypoint.sh"]

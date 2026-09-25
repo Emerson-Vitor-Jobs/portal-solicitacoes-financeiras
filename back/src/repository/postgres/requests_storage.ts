@@ -11,7 +11,13 @@ import type {
 } from '../../service/requests.js';
 import type { Status } from '../../types/common.js';
 import type { AuditEvent, FinanceRequest } from '../../types/domain.js';
-import { toCategory, toSafeInteger, toStatus } from './map.js';
+import {
+  fromCompetenceDate,
+  toCategory,
+  toCompetenceDate,
+  toSafeInteger,
+  toStatus,
+} from './map.js';
 import {
   countRequests,
   findRequestById,
@@ -38,7 +44,7 @@ function mapRequest(row: IFindRequestByIdResult): FinanceRequest {
     supplierCnpj: row.supplier_cnpj,
     invoiceNumber: row.invoice_number,
     amountCents: toSafeInteger(row.amount_cents),
-    competence: row.competence.slice(0, 7),
+    competence: fromCompetenceDate(row.competence),
     dueDate: row.due_date,
     category: toCategory(row.category),
     description: row.description,
@@ -88,7 +94,7 @@ class PgRequestStore implements RequestStore {
           supplierCnpj: request.supplierCnpj,
           invoiceNumber: request.invoiceNumber,
           amountCents: request.amountCents,
-          competence: `${request.competence}-01`,
+          competence: toCompetenceDate(request.competence),
           dueDate: request.dueDate,
           category: request.category,
           description: request.description,

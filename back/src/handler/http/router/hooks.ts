@@ -7,6 +7,7 @@ import type {
   onRequestHookHandler,
   preHandlerAsyncHookHandler,
 } from 'fastify';
+import type { LoginRateLimit } from '../../../config.js';
 import { normalizeEmail, type AuthService } from '../../../service/auth.js';
 import { ForbiddenError } from '../../../service/errors.js';
 import type { Role } from '../../../types/common.js';
@@ -42,12 +43,6 @@ export function requireRole(role: Role): onRequestHookHandler {
     }
     done();
   };
-}
-
-export interface LoginRateLimit {
-  perIp: number;
-  perEmail: number;
-  windowMs: number;
 }
 
 // Dois baldes no login (§14.6): por IP (muitas contas a partir de um lugar) e por e-mail normalizado (ataque

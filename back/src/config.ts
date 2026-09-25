@@ -1,6 +1,12 @@
 // Configuração lida do ambiente. Variável obrigatória ausente derruba a subida (nada de default silencioso).
 import { parseAppToday } from './modules/date.js';
 
+export interface LoginRateLimit {
+  perEmail: number;
+  perIp: number;
+  windowMs: number;
+}
+
 export interface Config {
   databaseUrl: string;
   port: number;
@@ -10,7 +16,7 @@ export interface Config {
   appToday: string | undefined;
   // Flag `Secure` do cookie de sessão: false em http local, true em produção com HTTPS (§8.4).
   cookieSecure: boolean;
-  loginRateLimit: { perEmail: number; perIp: number; windowMs: number };
+  loginRateLimit: LoginRateLimit;
   logLevel: string;
 }
 

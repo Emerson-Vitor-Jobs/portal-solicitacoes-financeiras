@@ -1,12 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import type { LoginRateLimit } from '../../../config.js';
 import type { AuthService } from '../../../service/auth.js';
 import { loginBodySchema, loginResponseSchema, meResponseSchema } from '../../../types/auth.js';
 import type { AuthController } from '../controller/auth.js';
 import { sessionToken, sessionUser } from '../request_context.js';
 import { CSRF_NOTE, SESSION, errors } from './contract.js';
-import { authenticate, loginRateLimit, type LoginRateLimit } from './hooks.js';
+import { authenticate, loginRateLimit } from './hooks.js';
 
 export interface AuthRouteDeps {
   service: AuthService;

@@ -19,6 +19,7 @@ import { dashboardRoutes } from './router/dashboard.js';
 import { healthRoutes, type HealthDeps } from './router/health.js';
 import { registerGlobalHooks } from './router/hooks.js';
 import { requestRoutes } from './router/requests.js';
+import { SESSION_COOKIE } from './session.js';
 
 // Mensagens de validação do Zod em português, como as do domínio (o `errors[]` do 422 chega à tela).
 z.config(z.locales.ptBR());
@@ -63,7 +64,7 @@ export async function buildServer(deps: ServerDeps): Promise<FastifyInstance> {
           'Autenticação por cookie de sessão `sid`.',
       },
       components: {
-        securitySchemes: { cookieAuth: { type: 'apiKey', in: 'cookie', name: 'sid' } },
+        securitySchemes: { cookieAuth: { type: 'apiKey', in: 'cookie', name: SESSION_COOKIE } },
       },
     },
     transform: jsonSchemaTransform,
