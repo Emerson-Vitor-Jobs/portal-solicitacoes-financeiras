@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { server } from '../../../test/msw';
@@ -70,6 +70,23 @@ describe('RequestDetailPage', () => {
     renderApp('/requests/20000000-0000-4000-8000-000000000002');
 
     expect(await screen.findByText('Solicitação não encontrada')).toBeInTheDocument();
+  });
+
+  test('refetch do detalhe que falha não desmonta o modal aberto nem perde o texto', async () => {
+    const user = userEvent.setup();
+    loginAs(FINANCE_EMAIL);
+    const { queryClient } = renderApp(`/requests/${REQUEST_BY_STATUS.PENDING}`);
+    await user.click(await screen.findByRole('button', { name: 'Rejeitar' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Rejeitar solicitação' }));
+    await user.type(dialog.getByLabelText(/Motivo da rejeição/), 'Motivo em edição');
+
+    server.use(http.get('*/api/requests/:id', () => problem(500, 'INTERNAL', 'x')));
+    await act(() => queryClient.refetchQueries({ queryKey: ['requests', 'detail'] }));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+
+    expect(screen.getByText('Não foi possível atualizar a solicitação')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Rejeitar solicitação' })).toBeInTheDocument();
+    expect(dialog.getByLabelText(/Motivo da rejeição/)).toHaveValue('Motivo em edição');
   });
 
   test('rejeitar exige motivo e envia o motivo; o histórico mostra a transição', async () => {

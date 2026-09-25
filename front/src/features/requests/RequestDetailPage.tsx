@@ -127,7 +127,9 @@ export function RequestDetailPage() {
     );
   }
 
-  if (detail.isError) {
+  // Tela de erro só sem dados: um refetch que falha (foco da janela, recarga depois de um 409) não
+  // troca a página nem desmonta um modal aberto com o que já foi digitado.
+  if (detail.data === undefined) {
     const notFound = hasCode(detail.error, 'NOT_FOUND');
     return (
       <Alert
@@ -179,6 +181,12 @@ export function RequestDetailPage() {
           </Group>
         )}
       </Group>
+
+      {detail.isError && (
+        <Alert color="yellow" title="Não foi possível atualizar a solicitação">
+          {errorMessage(detail.error)} Os dados abaixo podem estar desatualizados.
+        </Alert>
+      )}
 
       <RequestData request={request} />
 
