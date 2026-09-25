@@ -194,7 +194,7 @@ describe('decisão e pagamento', () => {
     expect(beforeApproval.json()).toMatchObject({ errors: [{ field: 'paid_at' }] });
 
     const future = await fernanda.post(`/api/requests/${id}/mark-paid`, {
-      paid_at: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+      paid_at: new Date(Date.now() + 60_000).toISOString(),
       payment_reference: 'PAG-1',
     });
     expect(future.statusCode).toBe(422);
@@ -211,6 +211,14 @@ describe('decisão e pagamento', () => {
       status: 'APPROVED',
       paid_at: null,
     });
+
+    // APP_TODAY (18/09) no passado e aprovação agora: pagar agora passa (o caso que a 1ª versão da §6.3 barrava).
+    const now = await fernanda.post(`/api/requests/${id}/mark-paid`, {
+      paid_at: new Date().toISOString(),
+      payment_reference: 'PAG-1',
+    });
+    expect(now.statusCode).toBe(200);
+    expect(now.json()).toMatchObject({ status: 'PAID' });
   });
 
   test('#14 sem o header anti-CSRF → 403 e nada é criado', async () => {

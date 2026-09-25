@@ -194,21 +194,28 @@ describe('#14 travas da data de pagamento', () => {
   const pay = (paidAt: string) =>
     service.markPaid(FERNANDA, ID, { paidAt: new Date(paidAt), paymentReference: 'PAG-77' });
 
-  test('último instante do dia de referência (SP) é aceito', async () => {
+  test('exatamente o agora do relógio real é aceito', async () => {
     seedIn('APPROVED');
-    const paid = await pay('2026-09-18T23:59:59-03:00');
+    const paid = await pay(clock.toISOString());
     expect(paid).toMatchObject({ status: 'PAID', paymentReference: 'PAG-77' });
-    expect(paid.paidAt?.toISOString()).toBe('2026-09-19T02:59:59.000Z');
+    expect(paid.paidAt?.toISOString()).toBe(clock.toISOString());
     // Auditoria: a referência do pagamento vai no reason (como no seed).
     expect(paid.history.at(-1)).toMatchObject({ newStatus: 'PAID', reason: 'PAG-77' });
   });
 
-  test('futuro (início do dia seguinte em SP) → 422 paid_at', async () => {
+  test('futuro (1 s depois do agora real) → 422 paid_at', async () => {
     seedIn('APPROVED');
-    const err = await pay('2026-09-19T00:00:00-03:00').catch((e: unknown) => e);
+    const err = await pay(new Date(clock.getTime() + 1000).toISOString()).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ValidationError);
-    expect((err as ValidationError).errors).toMatchObject([{ field: 'paid_at' }]);
+    expect((err as ValidationError).errors).toMatchObject([
+      { field: 'paid_at', message: 'A data de pagamento não pode ser futura.' },
+    ]);
     expect(repo.requests.get(ID)?.status).toBe('APPROVED');
+  });
+
+  test('mais tarde no mesmo dia de referência, mas depois do agora real → 422', async () => {
+    seedIn('APPROVED');
+    await expect(pay('2026-09-18T23:59:59-03:00')).rejects.toThrow(ValidationError);
   });
 
   test('antes da aprovação → 422 paid_at, e o UPDATE é desfeito', async () => {
@@ -223,12 +230,12 @@ describe('#14 travas da data de pagamento', () => {
     expect(repo.events).toHaveLength(before);
   });
 
-  test('APP_TODAY no passado: pagamento no dia real de hoje é aceito, amanhã real não', async () => {
-    // Referência 18/09, relógio real 25/09: a aprovação feita "agora" tem instante real de 25/09.
+  test('APP_TODAY no passado e aprovação "agora": pagar "agora" é aceito', async () => {
+    // Referência 18/09 (today), relógio real 25/09: a aprovação real foi agora há pouco.
     clock = new Date('2026-09-25T15:00:00-03:00');
     seedIn('APPROVED');
-    await expect(pay('2026-09-26T00:00:00-03:00')).rejects.toThrow(ValidationError);
-    await expect(pay('2026-09-25T15:00:00-03:00')).resolves.toMatchObject({ status: 'PAID' });
+    repo.events.at(-1)!.createdAt = new Date('2026-09-25T14:59:00-03:00');
+    await expect(pay(clock.toISOString())).resolves.toMatchObject({ status: 'PAID' });
   });
 
   test('no instante exato da aprovação é aceito', async () => {

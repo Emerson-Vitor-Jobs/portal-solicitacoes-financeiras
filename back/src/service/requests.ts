@@ -2,7 +2,7 @@
 // RequestRepository, declarada aqui; o adaptador PgTyped está em repository/postgres/requests_storage.ts.
 import { randomUUID } from 'node:crypto';
 import { isValidCnpj, normalizeCnpj } from '../modules/cnpj.js';
-import { businessDateOf, endOfDaySaoPaulo, isOverdue } from '../modules/date.js';
+import { isOverdue } from '../modules/date.js';
 import type { Category, Status } from '../types/common.js';
 import type {
   AuditEvent,
@@ -124,7 +124,7 @@ export interface MarkPaidInput {
 export interface RequestServiceDeps {
   // A data de referência (APP_TODAY ou hoje em SP), relida a cada operação.
   today: () => string;
-  // Relógio real (injetável), usado só no limite de "pagamento futuro".
+  // Relógio real (injetável): "pagamento futuro" é fato do relógio, não do calendário de referência (§6.3).
   now: () => Date;
   newId?: () => string;
 }
@@ -237,7 +237,8 @@ export class RequestService {
     return this.transition(actor, id, 'REJECTED', { reason: trimmed, rejectionReason: trimmed });
   }
 
-  // Travas da data de pagamento (§6.3): nem futura (depois do dia de referência, em SP), nem anterior à aprovação.
+  // Travas da data de pagamento (§6.3): nem posterior ao agora real, nem anterior à aprovação. O APP_TODAY vale só
+  // para as regras de calendário (vencido, pago no mês).
   async markPaid(actor: User, id: string, input: MarkPaidInput): Promise<RequestDetail> {
     requireRole(actor, 'FINANCE');
     const paymentReference = input.paymentReference.trim();
@@ -246,7 +247,7 @@ export class RequestService {
         { field: 'payment_reference', message: 'Informe a referência do pagamento.' },
       ]);
     }
-    if (input.paidAt.getTime() >= this.paymentDeadline().getTime()) {
+    if (input.paidAt.getTime() > this.deps.now().getTime()) {
       throw new ValidationError([
         { field: 'paid_at', message: 'A data de pagamento não pode ser futura.' },
       ]);
@@ -269,16 +270,6 @@ export class RequestService {
         }
       },
     );
-  }
-
-  // Fim exclusivo do "hoje" para o pagamento: o dia de referência (§6.3) ou o dia real em SP, o que vier depois.
-  // Sem APP_TODAY os dois são o mesmo dia e a regra é exatamente a da §6.3. Com APP_TODAY no passado, uma aprovação
-  // feita agora tem instante real posterior ao dia de referência; limitar só pela referência tornaria impossível
-  // pagar qualquer solicitação aprovada depois dele (as duas travas se contradiriam).
-  private paymentDeadline(): Date {
-    const reference = this.deps.today();
-    const realToday = businessDateOf(this.deps.now());
-    return endOfDaySaoPaulo(realToday > reference ? realToday : reference);
   }
 
   // Uma transição = compare-and-set do status + evento de auditoria, na MESMA transação (§5.5).

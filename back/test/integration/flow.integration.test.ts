@@ -53,8 +53,9 @@ describe('#9 fluxo completo com trilha de auditoria', () => {
     expect(approved.json()).toMatchObject({ status: 'APPROVED' });
     const approvedAt = Date.parse(approved.json<Detail>().history.at(-1)!.created_at);
 
-    // Pago meio segundo depois da aprovação, como informado pelo financeiro (não o instante do registro).
-    const paidAt = new Date(approvedAt + 500).toISOString();
+    // Pago no instante da aprovação, como informado pelo financeiro (não o instante do registro do pagamento).
+    // Não pode passar do agora real (§6.3), então nada de somar tempo à aprovação.
+    const paidAt = new Date(approvedAt).toISOString();
     const paid = await fernanda.post(`/api/requests/${id}/mark-paid`, {
       paid_at: paidAt,
       payment_reference: ' PAG-2026-9001 ',
