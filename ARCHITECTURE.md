@@ -1,11 +1,11 @@
 # Arquitetura
 
-Visão de como o sistema é montado e por quê. As decisões detalhadas, com fontes, estão em
+Como o sistema é montado e por quê. As decisões detalhadas, com fontes, estão em
 [`docs/decisoes/`](docs/decisoes/) (referenciadas aqui como §N).
 
-**Critério de todas as escolhas:** o enunciado pede *"uma solução pequena, correta e fácil de entender"*. O escopo é
-1 gatilho (HTTP), 3 entidades (usuário, solicitação, evento de auditoria), 1 banco. Cada padrão entra só se resolve um
-problema que esse escopo tem (§16).
+As escolhas seguem o enunciado, que pede *"uma solução pequena, correta e fácil de entender"*. O escopo é 1 gatilho
+(HTTP), 3 entidades (usuário, solicitação, evento de auditoria) e 1 banco, e cada padrão só entra se resolve um problema
+que esse escopo tem (§16).
 
 ## 1. Visão geral
 
@@ -22,11 +22,11 @@ flowchart LR
   D["data/*.json<br/>(montado :ro)"] -.->|seed| A
 ```
 
-- **Mesma origem:** o nginx serve o front e repassa `/api` para a API. O cookie de sessão `SameSite=Strict`
-  funciona sem CORS (§8.3).
-- **Boot ordenado:** o entrypoint da API aplica as migrations (dbmate), carrega o seed (idempotente) e só então sobe o
-  servidor. Se algo falhar, a API não sobe (§9.1).
-- **Dados do desafio intocáveis:** `data/` é montado só para leitura (§1b).
+- O nginx serve o front e repassa `/api` para a API. Como tudo fica na mesma origem, o cookie de sessão
+  `SameSite=Strict` funciona sem CORS (§8.3).
+- O entrypoint da API aplica as migrations (dbmate), carrega o seed (idempotente) e só então sobe o servidor. Se algo
+  falhar, a API não sobe (§9.1).
+- `data/`, com os dados do desafio, é montado só para leitura (§1b).
 
 ## 2. Backend
 
@@ -56,12 +56,12 @@ flowchart TB
   MAIN["app.ts / main.ts<br/>composition root: injeção manual"] -.-> R & S & ST
 ```
 
-- **Ports and Adapters no lado de saída:** o service declara a interface de que precisa, e o storage implementa. A
-  regra não conhece Postgres, PgTyped nem Fastify, e por isso os testes de regra usam fakes escritos à mão (§16).
-- **SQL escrito à mão, sem ORM:** o que se lê é o que roda. As peças críticas (compare-and-set, `FILTER`,
+- Ports and Adapters no lado de saída: o service declara a interface de que precisa e o storage a implementa. A regra
+  não conhece Postgres, PgTyped nem Fastify, por isso os testes de regra usam fakes escritos à mão (§16).
+- O SQL é escrito à mão, sem ORM, para que o que se lê seja o que roda. As peças críticas (compare-and-set, `FILTER`,
   `REPEATABLE READ`) ficam explícitas no `.sql` (§12).
-- **Contrato na borda:** `snake_case` no JSON e no banco, `camelCase` no domínio, com conversão só no `mapX()` e no
-  `toXResponse()` (§3).
+- O contrato usa `snake_case` no JSON e no banco e `camelCase` no domínio. A conversão acontece só na borda, no `mapX()`
+  e no `toXResponse()` (§3).
 
 ### 2.2 O coração: uma transição de status
 
@@ -89,14 +89,14 @@ sequenceDiagram
   end
 ```
 
-- **Por que é seguro contra concorrência:** em READ COMMITTED, um segundo `UPDATE` na mesma linha espera o primeiro
-  terminar e **reavalia o `WHERE`** na versão nova da linha (documentação do PostgreSQL, *Transaction Isolation*).
+- A transição é segura contra concorrência porque, em READ COMMITTED, um segundo `UPDATE` na mesma linha espera o
+  primeiro terminar e reavalia o `WHERE` na versão nova da linha (documentação do PostgreSQL, *Transaction Isolation*).
   Quem perde a corrida afeta 0 linhas e recebe 409 (§5.5).
-- **Sem transição sem histórico:** o `UPDATE` e o evento de auditoria estão na mesma transação. O repositório expõe
-  `inTransaction(fn)` (Unit of Work): o service decide *o que* é atômico, e o adaptador decide *como* (§16).
-- **Duplicidade** segue o mesmo princípio: `INSERT` puro contra o `UNIQUE (supplier_cnpj, invoice_number)`. O segundo
-  de dois inserts simultâneos espera o primeiro e recebe `23505`, que vira 409. Não existe "verificar e depois inserir"
-  na aplicação.
+- O `UPDATE` e o evento de auditoria estão na mesma transação, então não existe transição sem histórico. O repositório
+  expõe `inTransaction(fn)` (Unit of Work): o service decide *o que* é atômico e o adaptador decide *como* (§16).
+- A duplicidade segue o mesmo princípio: `INSERT` puro contra o `UNIQUE (supplier_cnpj, invoice_number)`. O segundo de
+  dois inserts simultâneos espera o primeiro e recebe `23505`, que vira 409. A aplicação não faz "verificar e depois
+  inserir".
 
 ### 2.3 Máquina de estados
 
@@ -110,7 +110,7 @@ stateDiagram-v2
   PAID --> [*]
 ```
 
-A regra está em três lugares, de propósito: na tabela `TRANSITIONS` do service (a regra), no `WHERE status = …` do
+A regra fica em três lugares de propósito: na tabela `TRANSITIONS` do service (a regra), no `WHERE status = …` do
 `UPDATE` (a concorrência) e num `CHECK` da tabela `audit_events` (o banco recusa um evento de transição inválida,
 mesmo vindo de um bug ou de SQL manual).
 
@@ -159,7 +159,7 @@ erDiagram
   }
 ```
 
-**O banco é a última linha de defesa:** além de `UNIQUE (supplier_cnpj, invoice_number)`, os `CHECK` garantem a
+O banco é a última linha de defesa. Além de `UNIQUE (supplier_cnpj, invoice_number)`, os `CHECK` garantem a
 coerência do estado (`REJECTED` ⇔ tem motivo; `PAID` ⇔ tem data **e** referência), o dinheiro positivo, o formato do
 CNPJ, a nota canônica e a competência no dia 1. Um trigger torna `audit_events` append-only (bloqueia `UPDATE` e
 `DELETE`).
@@ -186,20 +186,20 @@ flowchart LR
   P --> TH["theme.ts<br/>sistema visual"]
 ```
 
-- **Contrato gerado, nunca escrito à mão:** se o back mudar um campo, o front deixa de compilar. Um teste no back
-  garante que o `openapi.json` commitado é exatamente o que as rotas geram (§2).
-- **O front não decide regra de negócio:** vencido vem do `is_overdue` da API, o "hoje" vem da `reference_date`, e as
-  ações visíveis por perfil e status são só UX, porque quem garante é o back (403/409).
-- **Dinheiro sem float:** `parseBRLToCents` converte por texto com uma gramática brasileira estrita, e passa os 4
-  exemplos oficiais do desafio. A máscara do campo é estilo banco (cada dígito entra pela direita) (§14.1).
-- **Filtros na URL:** a URL é a fonte da verdade da lista (compartilhável, sobrevive a F5 e ao voltar), e os filtros e
-  a paginação vão como query para a API, que aplica no banco.
-- **Sistema visual num arquivo só** (`theme.ts`): paleta e tipografia do EasyPay (Nickelfox, CC BY 4.0) adaptadas a um
-  portal web; ilustrações Open Doodles (CC0) (§17).
+- Os tipos do contrato são gerados, nunca escritos à mão: se o back mudar um campo, o front deixa de compilar. Um teste
+  no back garante que o `openapi.json` commitado é exatamente o que as rotas geram (§2).
+- O front não decide regra de negócio. Vencido vem do `is_overdue` da API e o "hoje" vem da `reference_date`. As ações
+  visíveis por perfil e status são só UX, porque quem garante é o back (403/409).
+- Dinheiro não passa por float: `parseBRLToCents` converte por texto com uma gramática brasileira estrita e passa os 4
+  exemplos oficiais do desafio. A máscara do campo é estilo banco, com cada dígito entrando pela direita (§14.1).
+- A URL é a fonte da verdade da lista: compartilhável, sobrevive a F5 e ao voltar. Filtros e paginação vão como query
+  para a API, que os aplica no banco.
+- O sistema visual fica num arquivo só (`theme.ts`): paleta e tipografia do EasyPay (Nickelfox, CC BY 4.0) adaptadas a
+  um portal web, e ilustrações Open Doodles (CC0) (§17).
 
 ## 4. Tratamento de erros
 
-Todo erro sai no formato **RFC 9457** (`application/problem+json`), com `code` estável para máquina e `detail` para
+Todo erro sai no formato RFC 9457 (`application/problem+json`), com um `code` estável para máquina e um `detail` para
 pessoas:
 
 | Situação | Status | `code` |
@@ -213,7 +213,7 @@ pessoas:
 | Muitas tentativas de login | 429 | `TOO_MANY_REQUESTS` |
 | Inesperado | 500 | `INTERNAL` (sem detalhe interno) |
 
-O mapeamento mora num único lugar (`back/src/handler/http/errors.ts`), e o front decide sempre pelo `code`, nunca pelo
+O mapeamento fica num único lugar (`back/src/handler/http/errors.ts`), e o front decide sempre pelo `code`, nunca pelo
 texto (§4a, §5).
 
 ## 5. Tecnologias
