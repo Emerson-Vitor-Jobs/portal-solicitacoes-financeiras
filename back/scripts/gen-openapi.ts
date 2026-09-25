@@ -21,4 +21,4 @@ await writeFile(
 );
 await app.close();
 await neverConnectedPool.end();
-console.log('openapi.json gerado');
+console.log('openapi.json generated');

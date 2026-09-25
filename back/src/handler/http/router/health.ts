@@ -21,7 +21,7 @@ export function healthRoutes(app: FastifyInstance, deps: HealthDeps): void {
         await deps.ping();
         return { status: 'ok' as const };
       } catch (err) {
-        request.log.error({ err }, 'health: banco indisponível');
+        request.log.error({ err }, 'health: database unavailable');
         reply.code(503);
         return { status: 'unavailable' as const };
       }

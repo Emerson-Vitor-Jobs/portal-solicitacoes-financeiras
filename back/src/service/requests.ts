@@ -242,7 +242,7 @@ export class RequestService {
       async (store) => {
         const approvedAt = await store.findTransitionInstant(id, 'APPROVED');
         if (approvedAt === null) {
-          throw new Error('invariante quebrada: solicitação aprovada sem evento de aprovação');
+          throw new Error('broken invariant: approved request without an approval event');
         }
         if (input.paidAt.getTime() < floorToMinute(approvedAt).getTime()) {
           throw new ValidationError([
@@ -317,6 +317,6 @@ async function loadDetail(
   id: string,
 ): Promise<{ request: FinanceRequest; history: AuditEvent[] }> {
   const request = await store.findById(id);
-  if (!request) throw new Error('solicitação sumiu dentro da própria transação');
+  if (!request) throw new Error('request vanished inside its own transaction');
   return { request, history: await store.listHistory(id) };
 }

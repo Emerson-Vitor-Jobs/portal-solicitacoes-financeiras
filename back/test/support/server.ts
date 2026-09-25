@@ -63,7 +63,7 @@ export async function buildTestServer(options: TestServerOptions = {}): Promise<
     now,
     today,
     verifyPassword: fakeVerifyPassword,
-    dummyPasswordHash: fakeHash('senha-do-usuario-ficticio'),
+    dummyPasswordHash: fakeHash('dummy-user-password'),
   });
   const app = await buildServer({
     trustProxy: false,
@@ -92,12 +92,12 @@ export async function loginAs(
     headers: CSRF,
     payload: { email: user.email, password: user.password },
   });
-  if (res.statusCode !== 200) throw new Error(`login falhou no teste: ${res.statusCode}`);
+  if (res.statusCode !== 200) throw new Error(`login failed in test: ${res.statusCode}`);
   return sessionCookieOf(res);
 }
 
 export function sessionCookieOf(res: LightMyRequestResponse): string {
   const sid = res.cookies.find((c) => c.name === SESSION_COOKIE);
-  if (!sid) throw new Error('resposta sem cookie sid');
+  if (!sid) throw new Error('response without the session cookie');
   return `${SESSION_COOKIE}=${sid.value}`;
 }

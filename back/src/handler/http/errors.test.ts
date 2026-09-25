@@ -25,12 +25,12 @@ function expectProblem(
   expect(res.json()).toMatchObject({ type: 'about:blank', status, code });
 }
 
-describe('handler central de erro', () => {
-  test('rota inexistente → 404 NOT_FOUND', async () => {
-    expectProblem(await app.inject({ method: 'GET', url: '/api/nada' }), 404, 'NOT_FOUND');
+describe('central error handler', () => {
+  test('unknown route → 404 NOT_FOUND', async () => {
+    expectProblem(await app.inject({ method: 'GET', url: '/api/nothing' }), 404, 'NOT_FOUND');
   });
 
-  test('JSON quebrado → 400 VALIDATION_FAILED', async () => {
+  test('malformed JSON → 400 VALIDATION_FAILED', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
@@ -40,7 +40,7 @@ describe('handler central de erro', () => {
     expectProblem(res, 400, 'VALIDATION_FAILED');
   });
 
-  test('corpo bem formado mas inválido → 422 com erro por campo', async () => {
+  test('well-formed but invalid body → 422 with per-field errors', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/requests',
@@ -68,7 +68,7 @@ describe('handler central de erro', () => {
     );
   });
 
-  test('#7 rejeitar sem motivo → 422 no campo reason', async () => {
+  test('#7 rejecting without a reason → 422 on reason', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/requests/20000000-0000-4000-8000-000000000001/decision',
@@ -79,7 +79,7 @@ describe('handler central de erro', () => {
     expect(res.json()).toMatchObject({ errors: [{ field: 'reason' }] });
   });
 
-  test('page_size acima de 100 → 422', async () => {
+  test('page_size above 100 → 422', async () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/requests?page_size=101',

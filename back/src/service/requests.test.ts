@@ -47,7 +47,7 @@ function seedIn(status: Status) {
     {
       id: ID,
       status,
-      ...(status === 'REJECTED' ? { rejectionReason: 'motivo' } : {}),
+      ...(status === 'REJECTED' ? { rejectionReason: 'reason' } : {}),
       ...(status === 'PAID'
         ? { paidAt: new Date('2026-09-12T10:00:00-03:00'), paymentReference: 'PAG-1' }
         : {}),
@@ -56,8 +56,8 @@ function seedIn(status: Status) {
   );
 }
 
-describe('criar', () => {
-  test('normaliza CNPJ e nota, grava PENDING e o evento null → PENDING', async () => {
+describe('create', () => {
+  test('normalizes CNPJ and invoice, stores PENDING and the null → PENDING event', async () => {
     const created = await service.create(ANA, input());
     expect(created).toMatchObject({
       supplierCnpj: '10000000000145',
@@ -72,7 +72,7 @@ describe('criar', () => {
     ]);
   });
 
-  test('#11 CNPJ com DV errado → 422 no campo supplier_cnpj, nada gravado', async () => {
+  test('#11 CNPJ with a wrong check digit → 422 on supplier_cnpj, nothing stored', async () => {
     const err = await service
       .create(ANA, input({ supplierCnpj: '10000000000146' }))
       .catch((e: unknown) => e);
@@ -83,7 +83,7 @@ describe('criar', () => {
     expect(repo.requests.size).toBe(0);
   });
 
-  test('#2 duplicada (mesmo CNPJ e nota, em outra forma) → DuplicateInvoiceError, sem registro extra', async () => {
+  test('#2 duplicate (same CNPJ and invoice, written differently) → DuplicateInvoiceError, no extra row', async () => {
     await service.create(ANA, input());
     await expect(
       service.create(
@@ -95,15 +95,15 @@ describe('criar', () => {
     expect(repo.events).toHaveLength(1);
   });
 
-  test('FINANCE não cria solicitação', async () => {
+  test('FINANCE cannot create a request', async () => {
     await expect(service.create(FERNANDA, input())).rejects.toThrow(ForbiddenError);
   });
 });
 
-describe('#5 transições pelo service: cada status × cada ação', () => {
+describe('#5 transitions through the service: every status × every action', () => {
   const actions = {
     APPROVED: (id: string) => service.approve(FERNANDA, id),
-    REJECTED: (id: string) => service.reject(FERNANDA, id, 'fora do orçamento'),
+    REJECTED: (id: string) => service.reject(FERNANDA, id, 'over budget'),
     PAID: (id: string) =>
       service.markPaid(FERNANDA, id, {
         paidAt: new Date('2026-09-15T10:00:00-03:00'),
@@ -120,7 +120,7 @@ describe('#5 transições pelo service: cada status × cada ação', () => {
   for (const from of STATUSES) {
     for (const to of ['APPROVED', 'REJECTED', 'PAID'] as const) {
       const ok = allowed[from].includes(to);
-      test(`${from} → ${to}: ${ok ? 'permitida' : '409 INVALID_TRANSITION'}`, async () => {
+      test(`${from} → ${to}: ${ok ? 'allowed' : '409 INVALID_TRANSITION'}`, async () => {
         seedIn(from);
         const before = repo.events.length;
         if (ok) {
@@ -146,8 +146,8 @@ describe('#5 transições pelo service: cada status × cada ação', () => {
   }
 });
 
-describe('regras das transições', () => {
-  test('#7 rejeitar com motivo em branco → 422 no campo reason', async () => {
+describe('transition rules', () => {
+  test('#7 rejecting with a blank reason → 422 on reason', async () => {
     seedIn('PENDING');
     const err = await service.reject(FERNANDA, ID, '   ').catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ValidationError);
@@ -155,14 +155,14 @@ describe('regras das transições', () => {
     expect(repo.requests.get(ID)?.status).toBe('PENDING');
   });
 
-  test('rejeição grava o motivo na solicitação e no evento', async () => {
+  test('rejection stores the reason on the request and on the event', async () => {
     seedIn('PENDING');
-    const updated = await service.reject(FERNANDA, ID, '  fora do orçamento ');
-    expect(updated.rejectionReason).toBe('fora do orçamento');
-    expect(updated.history.at(-1)?.reason).toBe('fora do orçamento');
+    const updated = await service.reject(FERNANDA, ID, '  over budget ');
+    expect(updated.rejectionReason).toBe('over budget');
+    expect(updated.history.at(-1)?.reason).toBe('over budget');
   });
 
-  test('#4 REQUESTER não aprova, não rejeita, não paga', async () => {
+  test('#4 REQUESTER cannot approve, reject or pay', async () => {
     seedIn('PENDING');
     await expect(service.approve(ANA, ID)).rejects.toThrow(ForbiddenError);
     await expect(service.reject(ANA, ID, 'x')).rejects.toThrow(ForbiddenError);
@@ -171,11 +171,11 @@ describe('regras das transições', () => {
     ).rejects.toThrow(ForbiddenError);
   });
 
-  test('perdedor da corrida: o status mudou entre a leitura e o UPDATE → 409 com o status novo', async () => {
+  test('race loser: the status changed between the read and the UPDATE → 409 with the new status', async () => {
     seedIn('PENDING');
     repo.beforeUpdate = (requests) => {
       const r = requests.get(ID);
-      if (r) requests.set(ID, { ...r, status: 'REJECTED', rejectionReason: 'outra pessoa' });
+      if (r) requests.set(ID, { ...r, status: 'REJECTED', rejectionReason: 'someone else' });
       repo.beforeUpdate = null;
     };
     await expect(service.approve(FERNANDA, ID)).rejects.toThrow(
@@ -183,17 +183,17 @@ describe('regras das transições', () => {
     );
   });
 
-  test('id inexistente ou que não é UUID → 404', async () => {
+  test('unknown or non-UUID id → 404', async () => {
     await expect(service.approve(FERNANDA, ID)).rejects.toThrow(NotFoundError);
     await expect(service.approve(FERNANDA, 'abc')).rejects.toThrow(NotFoundError);
   });
 });
 
-describe('#14 travas da data de pagamento', () => {
+describe('#14 payment date guards', () => {
   const pay = (paidAt: string) =>
     service.markPaid(FERNANDA, ID, { paidAt: new Date(paidAt), paymentReference: 'PAG-77' });
 
-  test('exatamente o agora do relógio real é aceito', async () => {
+  test('exactly the real clock now is accepted', async () => {
     seedIn('APPROVED');
     const paid = await pay(clock.toISOString());
     expect(paid).toMatchObject({ status: 'PAID', paymentReference: 'PAG-77' });
@@ -201,7 +201,7 @@ describe('#14 travas da data de pagamento', () => {
     expect(paid.history.at(-1)).toMatchObject({ newStatus: 'PAID', reason: 'PAG-77' });
   });
 
-  test('futuro (1 s depois do agora real) → 422 paid_at', async () => {
+  test('future (1 s after the real now) → 422 paid_at', async () => {
     seedIn('APPROVED');
     const err = await pay(new Date(clock.getTime() + 1000).toISOString()).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ValidationError);
@@ -211,12 +211,12 @@ describe('#14 travas da data de pagamento', () => {
     expect(repo.requests.get(ID)?.status).toBe('APPROVED');
   });
 
-  test('mais tarde no mesmo dia de referência, mas depois do agora real → 422', async () => {
+  test('later on the same reference day but after the real now → 422', async () => {
     seedIn('APPROVED');
     await expect(pay('2026-09-18T23:59:59-03:00')).rejects.toThrow(ValidationError);
   });
 
-  test('antes da aprovação → 422 paid_at, e o UPDATE é desfeito', async () => {
+  test('before the approval → 422 paid_at and the UPDATE is rolled back', async () => {
     seedIn('APPROVED');
     const before = repo.events.length;
     const err = await pay('2026-09-10T10:59:59-03:00').catch((e: unknown) => e);
@@ -228,49 +228,49 @@ describe('#14 travas da data de pagamento', () => {
     expect(repo.events).toHaveLength(before);
   });
 
-  test('aprovar e pagar no mesmo minuto: a hora do formulário (sem segundos) é aceita', async () => {
+  test('approve and pay in the same minute: the form time (no seconds) is accepted', async () => {
     clock = new Date('2026-09-25T14:52:10-03:00');
     seedIn('APPROVED');
     repo.events.at(-1)!.createdAt = new Date('2026-09-25T14:51:37-03:00');
     await expect(pay('2026-09-25T14:51:00-03:00')).resolves.toMatchObject({ status: 'PAID' });
   });
 
-  test('no minuto anterior ao da aprovação continua recusado', async () => {
+  test('the minute before the approval is still rejected', async () => {
     clock = new Date('2026-09-25T14:52:10-03:00');
     seedIn('APPROVED');
     repo.events.at(-1)!.createdAt = new Date('2026-09-25T14:51:37-03:00');
     await expect(pay('2026-09-25T14:50:59-03:00')).rejects.toThrow(ValidationError);
   });
 
-  test('APP_TODAY no passado e aprovação "agora": pagar "agora" é aceito', async () => {
+  test('APP_TODAY in the past and approval "now": paying "now" is accepted', async () => {
     clock = new Date('2026-09-25T15:00:00-03:00');
     seedIn('APPROVED');
     repo.events.at(-1)!.createdAt = new Date('2026-09-25T14:59:00-03:00');
     await expect(pay(clock.toISOString())).resolves.toMatchObject({ status: 'PAID' });
   });
 
-  test('no instante exato da aprovação é aceito', async () => {
+  test('the exact approval instant is accepted', async () => {
     seedIn('APPROVED');
     await expect(pay(APPROVED_AT.toISOString())).resolves.toMatchObject({ status: 'PAID' });
   });
 });
 
-describe('leitura e escopo', () => {
-  test('#13 REQUESTER não vê a solicitação de outra pessoa: 404, igual a inexistente', async () => {
+describe('reading and scope', () => {
+  test('#13 REQUESTER cannot see another person request: 404, same as unknown', async () => {
     seedIn('PENDING');
     await expect(service.get(BRUNO, ID)).rejects.toThrow(NotFoundError);
     await expect(service.get(ANA, ID)).resolves.toMatchObject({ id: ID });
     await expect(service.get(FERNANDA, ID)).resolves.toMatchObject({ id: ID });
   });
 
-  test('#12 is_overdue contra a data de referência: vence hoje não está vencida', async () => {
+  test('#12 is_overdue against the reference date: due today is not overdue', async () => {
     repo.seed({ id: ID, dueDate: '2026-09-18' });
     expect((await service.get(ANA, ID)).isOverdue).toBe(false);
     repo.seed({ id: ID, dueDate: '2026-09-17' });
     expect((await service.get(ANA, ID)).isOverdue).toBe(true);
   });
 
-  test('lista: REQUESTER só vê as próprias; total_pages arredonda para cima', async () => {
+  test('list: REQUESTER sees only their own; total_pages rounds up', async () => {
     for (let i = 1; i <= 3; i++) {
       repo.seed({ id: `${ID.slice(0, -2)}0${i}` });
     }

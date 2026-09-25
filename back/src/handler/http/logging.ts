@@ -67,7 +67,7 @@ export function loggerOptions(level: string, stream?: LogStream): FastifyServerO
         'password',
         '*.password',
       ],
-      censor: '[omitido]',
+      censor: '[redacted]',
     },
     serializers: { err: serializeError as unknown as ErrSerializer },
     ...(stream ? { stream } : {}),

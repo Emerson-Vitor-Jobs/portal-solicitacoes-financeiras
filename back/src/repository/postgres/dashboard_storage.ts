@@ -17,7 +17,7 @@ export class DashboardStorage implements DashboardRepository {
       },
       this.pool,
     );
-    if (!row) throw new Error('agregação do dashboard não devolveu linha');
+    if (!row) throw new Error('dashboard aggregation returned no row');
     return {
       pendingAmountCents: toSafeInteger(row.pending_amount_cents),
       approvedAmountCents: toSafeInteger(row.approved_amount_cents),

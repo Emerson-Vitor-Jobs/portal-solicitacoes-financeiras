@@ -38,8 +38,8 @@ afterEach(async () => {
   await app.close();
 });
 
-describe('#9 fluxo completo com trilha de auditoria', () => {
-  test('criar → aprovar → pagar; history com 3 eventos na ordem; paid_at é o informado', async () => {
+describe('#9 full flow with audit trail', () => {
+  test('create → approve → pay; history with 3 events in order; paid_at is the informed one', async () => {
     const ana = http(app, await loginAs(app, ANA));
     const fernanda = http(app, await loginAs(app, FERNANDA));
 
@@ -83,8 +83,8 @@ describe('#9 fluxo completo com trilha de auditoria', () => {
   });
 });
 
-describe('política de log com erro real do banco (§14.5)', () => {
-  test('o 23505 provocado não deixa CNPJ, nota nem valor no log', async () => {
+describe('log policy with a real database error (§14.5)', () => {
+  test('the provoked 23505 leaves no CNPJ, invoice or amount in the log', async () => {
     const ana = http(app, await loginAs(app, ANA));
     expect((await ana.post('/api/requests', VALID_REQUEST)).statusCode).toBe(201);
     expect((await ana.post('/api/requests', VALID_REQUEST)).statusCode).toBe(409);

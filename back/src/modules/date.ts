@@ -16,7 +16,7 @@ export function isBusinessDate(value: string): boolean {
 
 function parseBusinessDateParts(date: string): [number, number, number] {
   const match = BUSINESS_DATE.exec(date);
-  if (!match || !isBusinessDate(date)) throw new Error(`data de negócio inválida: ${date}`);
+  if (!match || !isBusinessDate(date)) throw new Error(`invalid business date: ${date}`);
   return [Number(match[1]), Number(match[2]), Number(match[3])];
 }
 
@@ -41,7 +41,7 @@ export function businessDateOf(instant: Date): string {
 
 export function parseAppToday(appToday: string | undefined): string | undefined {
   if (appToday !== undefined && !isBusinessDate(appToday)) {
-    throw new Error(`APP_TODAY inválida (use YYYY-MM-DD): ${appToday}`);
+    throw new Error(`invalid APP_TODAY (use YYYY-MM-DD): ${appToday}`);
   }
   return appToday;
 }
@@ -62,7 +62,7 @@ const offsetInSaoPaulo = new Intl.DateTimeFormat('en-US', {
 function offsetMinutes(instant: number): number {
   const name = offsetInSaoPaulo.formatToParts(instant).find((p) => p.type === 'timeZoneName');
   const match = /^GMT(?:([+-])(\d{2}):(\d{2}))?$/.exec(name?.value ?? '');
-  if (!match) throw new Error('fuso de America/Sao_Paulo indisponível no Intl');
+  if (!match) throw new Error('America/Sao_Paulo time zone unavailable in Intl');
   if (match[1] === undefined) return 0;
   const minutes = Number(match[2]) * 60 + Number(match[3]);
   return match[1] === '-' ? -minutes : minutes;

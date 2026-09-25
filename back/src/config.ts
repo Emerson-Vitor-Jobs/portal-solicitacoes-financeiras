@@ -19,7 +19,7 @@ export interface Config {
 export function mustGetEnv(name: string): string {
   const value = process.env[name];
   if (value === undefined || value === '') {
-    throw new Error(`variável de ambiente obrigatória ausente: ${name}`);
+    throw new Error(`missing required environment variable: ${name}`);
   }
   return value;
 }
@@ -28,7 +28,7 @@ function positiveInt(name: string, fallback: number): number {
   const raw = process.env[name];
   if (raw === undefined || raw === '') return fallback;
   const value = Number(raw);
-  if (!Number.isInteger(value) || value <= 0) throw new Error(`${name} inválida: ${raw}`);
+  if (!Number.isInteger(value) || value <= 0) throw new Error(`invalid ${name}: ${raw}`);
   return value;
 }
 
@@ -37,7 +37,7 @@ function boolean(name: string, fallback: boolean): boolean {
   if (raw === undefined || raw === '') return fallback;
   if (raw === 'true') return true;
   if (raw === 'false') return false;
-  throw new Error(`${name} inválida: use true ou false`);
+  throw new Error(`invalid ${name}: use true or false`);
 }
 
 export function loadConfig(): Config {

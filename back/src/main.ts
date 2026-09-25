@@ -9,7 +9,7 @@ async function main(): Promise<void> {
   const app = await buildApp(pool, config);
 
   const shutdown = async (signal: string): Promise<void> => {
-    app.log.info({ signal }, 'encerrando');
+    app.log.info({ signal }, 'shutting down');
     await app.close();
     await pool.end();
   };
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
       shutdown(signal).then(
         () => process.exit(0),
         (err: unknown) => {
-          app.log.error({ err }, 'falha ao encerrar');
+          app.log.error({ err }, 'shutdown failed');
           process.exit(1);
         },
       );
@@ -29,6 +29,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-  console.error('falha ao iniciar a API:', err);
+  console.error('failed to start the API:', err);
   process.exit(1);
 });

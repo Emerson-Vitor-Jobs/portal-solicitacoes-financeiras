@@ -9,7 +9,7 @@ import {
 } from './auth.js';
 import { InvalidCredentialsError, UnauthenticatedError } from './errors.js';
 
-const DUMMY = fakeHash('hash-do-usuario-ficticio');
+const DUMMY = fakeHash('dummy-user-hash');
 const MINUTE = 60_000;
 
 let repo: FakeAuthRepository;
@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 
 describe('login', () => {
-  test('credencial certa cria sessão e devolve o usuário sem hash', async () => {
+  test('valid credentials create a session and return the user without the hash', async () => {
     const result = await service.login(ANA.email, ANA.password);
     expect(result.user).toEqual({
       id: ANA.id,
@@ -45,27 +45,27 @@ describe('login', () => {
     expect(repo.sessions.size).toBe(1);
   });
 
-  test('e-mail com maiúsculas e espaços é normalizado', async () => {
+  test('an e-mail with uppercase and spaces is normalized', async () => {
     await expect(service.login('  SOLICITANTE@gex.TEST ', ANA.password)).resolves.toBeDefined();
   });
 
-  test('#13 usuário inexistente e senha errada: mesmo erro e a mesma verificação argon2', async () => {
-    await expect(service.login(ANA.email, 'errada')).rejects.toThrow(InvalidCredentialsError);
-    await expect(service.login('ninguem@gex.test', 'errada')).rejects.toThrow(
+  test('#13 unknown user and wrong password: same error and the same argon2 verification', async () => {
+    await expect(service.login(ANA.email, 'wrong')).rejects.toThrow(InvalidCredentialsError);
+    await expect(service.login('nobody@gex.test', 'wrong')).rejects.toThrow(
       InvalidCredentialsError,
     );
     expect(verifiedHashes).toEqual([fakeHash(ANA.password), DUMMY]);
     expect(repo.sessions.size).toBe(0);
   });
 
-  test('cada login gera uma sessão nova (sem fixation)', async () => {
+  test('each login creates a new session (no fixation)', async () => {
     const a = await service.login(ANA.email, ANA.password);
     const b = await service.login(ANA.email, ANA.password);
     expect(a.token).not.toBe(b.token);
     expect(repo.sessions.size).toBe(2);
   });
 
-  test('o banco guarda só o hash do token', async () => {
+  test('the database stores only the token hash', async () => {
     const { token } = await service.login(ANA.email, ANA.password);
     const [stored] = [...repo.sessions.keys()];
     expect(stored).toHaveLength(64);
@@ -73,21 +73,21 @@ describe('login', () => {
   });
 });
 
-describe('sessão: expiração com relógio injetado', () => {
-  test('dentro dos limites, devolve o usuário com o papel do banco', async () => {
+describe('session: expiration with an injected clock', () => {
+  test('within the limits, returns the user with the role from the database', async () => {
     const { token } = await service.login(FERNANDA.email, FERNANDA.password);
     clock += 29 * MINUTE;
     await expect(service.authenticate(token)).resolves.toMatchObject({ role: 'FINANCE' });
   });
 
-  test('ociosa: 30 min sem uso → 401 e a sessão é apagada', async () => {
+  test('idle: 30 min without use → 401 and the session is deleted', async () => {
     const { token } = await service.login(ANA.email, ANA.password);
     clock += IDLE_TIMEOUT_MS;
     await expect(service.authenticate(token)).rejects.toThrow(UnauthenticatedError);
     expect(repo.sessions.size).toBe(0);
   });
 
-  test('absoluta: 8 h depois do login cai mesmo com uso contínuo', async () => {
+  test('absolute: 8 h after login it expires even with continuous use', async () => {
     const { token } = await service.login(ANA.email, ANA.password);
     const end = clock + ABSOLUTE_TIMEOUT_MS;
     while (clock + 20 * MINUTE < end) {
@@ -98,7 +98,7 @@ describe('sessão: expiração com relógio injetado', () => {
     await expect(service.authenticate(token)).rejects.toThrow(UnauthenticatedError);
   });
 
-  test('last_seen_at é gravado no máximo 1× por minuto', async () => {
+  test('last_seen_at is written at most once per minute', async () => {
     const { token } = await service.login(ANA.email, ANA.password);
     clock += 10_000;
     await service.authenticate(token);
@@ -110,13 +110,13 @@ describe('sessão: expiração com relógio injetado', () => {
     expect(repo.touches).toEqual([new Date(clock)]);
   });
 
-  test('sem token, token vazio ou desconhecido → 401', async () => {
+  test('missing, empty or unknown token → 401', async () => {
     await expect(service.authenticate(undefined)).rejects.toThrow(UnauthenticatedError);
     await expect(service.authenticate('')).rejects.toThrow(UnauthenticatedError);
-    await expect(service.authenticate('nao-existe')).rejects.toThrow(UnauthenticatedError);
+    await expect(service.authenticate('does-not-exist')).rejects.toThrow(UnauthenticatedError);
   });
 
-  test('logout apaga a sessão', async () => {
+  test('logout deletes the session', async () => {
     const { token } = await service.login(ANA.email, ANA.password);
     await service.logout(token);
     await expect(service.authenticate(token)).rejects.toThrow(UnauthenticatedError);

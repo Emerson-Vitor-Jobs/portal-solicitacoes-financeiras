@@ -5,8 +5,8 @@ import { ANA } from '../../../test/support/users.js';
 import { serializeError } from './logging.js';
 import { SESSION_COOKIE } from './session.js';
 
-describe('política de log (§14.5)', () => {
-  test('erro de banco vira só { name, code }: detail, where e valores ficam de fora', () => {
+describe('log policy (§14.5)', () => {
+  test('a database error becomes only { name, code }: detail, where and values are left out', () => {
     const pgError = Object.assign(new Error('duplicate key value violates unique constraint'), {
       name: 'error',
       code: '23505',
@@ -18,28 +18,28 @@ describe('política de log (§14.5)', () => {
     expect(JSON.stringify(serializeError(pgError))).not.toContain('10000000000145');
   });
 
-  test('valor que não é objeto também é reduzido', () => {
+  test('a non-object value is reduced too', () => {
     expect(serializeError('boom')).toEqual({ name: 'string' });
   });
 
-  test('a linha da requisição tem os campos da política e nada de senha, cookie ou corpo', async () => {
+  test('the request line has the policy fields and no password, cookie or body', async () => {
     const logs = new LogCapture();
     const { app } = await buildTestServer({ logStream: logs });
     const cookie = await loginAs(app, ANA);
-    await app.inject({ method: 'GET', url: '/api/auth/me?x=segredo', headers: { cookie } });
+    await app.inject({ method: 'GET', url: '/api/auth/me?x=secret', headers: { cookie } });
     await app.inject({
       method: 'POST',
       url: '/api/auth/login',
       headers: CSRF,
-      payload: { email: ANA.email, password: 'senha-errada-no-log' },
+      payload: { email: ANA.email, password: 'wrong-password-in-log' },
     });
     await app.close();
 
     const text = logs.text;
     expect(text).not.toContain(ANA.password);
-    expect(text).not.toContain('senha-errada-no-log');
+    expect(text).not.toContain('wrong-password-in-log');
     expect(text).not.toContain(cookie.slice(`${SESSION_COOKIE}=`.length));
-    expect(text).not.toContain('segredo');
+    expect(text).not.toContain('secret');
 
     const requests = logs.entries().filter((e) => e.msg === 'request completed');
     expect(requests).toHaveLength(3);

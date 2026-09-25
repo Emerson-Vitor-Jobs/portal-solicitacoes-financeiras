@@ -93,7 +93,7 @@ export function registerErrorHandling(app: FastifyInstance): void {
     if (err.statusCode === 429) {
       return sendProblem(reply, problem(429, 'TOO_MANY_REQUESTS', err.message));
     }
-    request.log.error({ err }, 'erro não tratado');
+    request.log.error({ err }, 'unhandled error');
     return sendProblem(reply, problem(500, 'INTERNAL', 'Erro interno.'));
   });
 
