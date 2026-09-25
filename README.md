@@ -97,7 +97,10 @@ docs/     decisões de arquitetura
 
 ## Licença e créditos
 
-Código sob a licença [MIT](LICENSE). Material de terceiros:
+**Todos os direitos reservados.** O código é disponibilizado sob uma [licença de avaliação](LICENSE): uso permitido
+somente para avaliar a candidatura no processo seletivo, sem uso em produção, redistribuição ou obra derivada.
+
+Material de terceiros (cada um sob a sua própria licença):
 
 - Sistema visual (paleta e tipografia) inspirado em [EasyPay: E-Wallet Digital Payment App](https://www.figma.com/community/file/1146678238901785717/easypay-e-wallet-digital-payment-app),
   de Nickelfox (Figma Community, CC BY 4.0).

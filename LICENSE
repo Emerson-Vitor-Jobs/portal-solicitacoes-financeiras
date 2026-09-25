@@ -1,34 +1,44 @@
-MIT License
+Copyright (c) 2026 Emerson Silva. Todos os direitos reservados.
 
-Copyright (c) 2026 Emerson Silva
+LICENÇA DE AVALIAÇÃO
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Este software e sua documentação ("o Software") são de autoria de Emerson Silva.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Permissão concedida. É concedida à GEX e às pessoas por ela designadas para o seu
+   processo seletivo a permissão, não exclusiva, intransferível e revogável, de
+   acessar, clonar, executar e ler o Software EXCLUSIVAMENTE para avaliar a
+   candidatura técnica do autor.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. Proibições. Sem autorização prévia e por escrito do autor, é proibido:
+   a) usar o Software, no todo ou em parte, em produção ou para qualquer finalidade
+      comercial ou interna que não seja a avaliação descrita no item 1;
+   b) copiar, redistribuir, publicar, sublicenciar ou vender o Software;
+   c) modificar o Software ou criar obras derivadas a partir dele.
+
+3. Vigência. A permissão do item 1 termina com o encerramento do processo seletivo,
+   ou antes, se o autor a revogar. Ao término, as cópias devem ser apagadas.
+
+4. Nenhuma cessão. Nada nesta licença transfere ou cede qualquer direito de
+   propriedade intelectual sobre o Software. Todos os direitos não concedidos
+   expressamente ficam reservados ao autor.
+
+5. Sem garantias. O Software é fornecido "no estado em que se encontra", sem
+   garantias de qualquer tipo. O autor não se responsabiliza por danos decorrentes
+   do seu uso.
+
+Para qualquer outro uso: emerson@risilva.com
 
 ---------------------------------------------------------------------------
 
-Third-party material (not covered by the license above)
+Material de terceiros (não coberto pela licença acima; cada um segue a sua)
 
-- data/*.json: challenge data provided by the evaluator, reproduced unchanged.
-- front/src/assets/doodles/*.svg: Open Doodles by Pablo Stanley, CC0 1.0
-  (https://www.opendoodles.com). See front/src/assets/doodles/LICENSE.md.
-- Visual design inspired by "EasyPay: E-Wallet Digital Payment App" by Nickelfox
-  (Figma Community), licensed CC BY 4.0
-  (https://creativecommons.org/licenses/by/4.0/). Only the palette and typography
-  were adapted; no assets from that file are included.
-- Fonts IBM Plex Sans and Roboto (via @fontsource), SIL Open Font License 1.1.
+- data/*.json: dados do desafio fornecidos pela GEX, reproduzidos sem alteração.
+- front/src/assets/doodles/*.svg: Open Doodles, de Pablo Stanley, CC0 1.0
+  (https://www.opendoodles.com). Ver front/src/assets/doodles/LICENSE.md.
+- Sistema visual (paleta e tipografia) inspirado em "EasyPay: E-Wallet Digital
+  Payment App", de Nickelfox (Figma Community), CC BY 4.0
+  (https://creativecommons.org/licenses/by/4.0/). Nenhum arquivo daquele projeto
+  está incluído.
+- Fontes IBM Plex Sans e Roboto (via @fontsource), SIL Open Font License 1.1.
+- Dependências npm listadas em back/package.json e front/package.json, cada uma sob
+  a sua própria licença.
