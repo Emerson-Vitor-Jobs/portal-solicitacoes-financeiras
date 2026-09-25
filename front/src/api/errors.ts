@@ -55,7 +55,7 @@ export function errorMessage(error: unknown): string {
   }
   const code = error.code;
   if (code === null) {
-    return `Erro inesperado do servidor (HTTP ${error.status}). Tente novamente.`;
+    return unexpectedServerMessage(error.status);
   }
   switch (code) {
     case 'VALIDATION_FAILED':
@@ -77,10 +77,14 @@ export function errorMessage(error: unknown): string {
     case 'INTERNAL':
       return 'Erro interno do servidor. Tente novamente em instantes.';
   }
-  return `Erro inesperado do servidor (HTTP ${error.status}). Tente novamente.`;
+  return unexpectedServerMessage(error.status);
 }
 
-export function tooManyRequestsMessage(retryAfterSeconds: number | null): string {
+function unexpectedServerMessage(status: number): string {
+  return `Erro inesperado do servidor (HTTP ${status}). Tente novamente.`;
+}
+
+function tooManyRequestsMessage(retryAfterSeconds: number | null): string {
   if (retryAfterSeconds === null) {
     return 'Muitas tentativas de login. Tente novamente em instantes.';
   }

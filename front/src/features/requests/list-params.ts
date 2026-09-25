@@ -3,7 +3,7 @@ import { isEnumValue, STATUS_LABELS } from '../../lib/labels';
 import type { RequestStatus } from '../../api/types';
 import type { ListQuery } from './api';
 
-export const PAGE_SIZE = 20;
+const PAGE_SIZE = 20;
 
 export type ListFilters = {
   status: RequestStatus | null;

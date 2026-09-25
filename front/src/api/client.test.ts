@@ -12,7 +12,9 @@ describe('API client: 401 handling', () => {
     setUnauthenticatedListener(listener);
     server.use(http.get('*/api/dashboard/summary', () => problem(401, 'UNAUTHENTICATED', 'x')));
 
-    const error = await unwrap(api.GET('/api/dashboard/summary')).catch((e: unknown) => e);
+    const error = await unwrap(api.GET('/api/dashboard/summary')).catch(
+      (thrown: unknown) => thrown,
+    );
 
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).code).toBe('UNAUTHENTICATED');
@@ -25,7 +27,7 @@ describe('API client: 401 handling', () => {
 
     const error = await unwrap(
       api.POST('/api/auth/login', { body: { email: 'x@gex.test', password: 'errada' } }),
-    ).catch((e: unknown) => e);
+    ).catch((thrown: unknown) => thrown);
 
     expect((error as ApiError).code).toBe('INVALID_CREDENTIALS');
     expect(listener).not.toHaveBeenCalled();
@@ -34,7 +36,7 @@ describe('API client: 401 handling', () => {
   test('an error without a Problem body (e.g. proxy 502) becomes an ApiError without code', async () => {
     server.use(http.get('*/api/auth/me', () => new Response('<html>502</html>', { status: 502 })));
 
-    const error = await unwrap(api.GET('/api/auth/me')).catch((e: unknown) => e);
+    const error = await unwrap(api.GET('/api/auth/me')).catch((thrown: unknown) => thrown);
 
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).status).toBe(502);
@@ -55,7 +57,7 @@ describe('API client: 401 handling', () => {
     );
 
     await unwrap(api.POST('/api/auth/logout'));
-    await unwrap(api.GET('/api/auth/me')).catch((e: unknown) => e);
+    await unwrap(api.GET('/api/auth/me')).catch((thrown: unknown) => thrown);
 
     expect(seen.post).toBe(CSRF_HEADER_VALUE);
     expect(seen.get).toBeNull();

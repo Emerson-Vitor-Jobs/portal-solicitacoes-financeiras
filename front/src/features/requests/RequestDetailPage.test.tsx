@@ -16,7 +16,9 @@ const REQUEST_BY_STATUS: Record<RequestStatus, string> = {
 const ALL_ACTIONS = ['Aprovar', 'Rejeitar', 'Marcar como pago'];
 
 function postsTo(suffix: string) {
-  return state.requestLog.filter((r) => r.method === 'POST' && r.url.pathname.endsWith(suffix));
+  return state.requestLog.filter(
+    (call) => call.method === 'POST' && call.url.pathname.endsWith(suffix),
+  );
 }
 
 describe('#10 RequestDetailPage: actions by role and status', () => {
@@ -102,7 +104,7 @@ describe('RequestDetailPage', () => {
     await user.click(dialog.getByRole('button', { name: 'Confirmar rejeição' }));
 
     expect(await screen.findByText('Pendente → Rejeitada')).toBeInTheDocument();
-    expect(postsTo('/decision').map((r) => r.body)).toEqual([
+    expect(postsTo('/decision').map((call) => call.body)).toEqual([
       { decision: 'REJECT', reason: 'Nota sem assinatura' },
     ]);
     expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument();
@@ -136,7 +138,7 @@ describe('RequestDetailPage', () => {
     renderApp(`/requests/${REQUEST_BY_STATUS.PENDING}`);
     await user.click(await screen.findByRole('button', { name: 'Aprovar' }));
 
-    const request = state.requests.find((r) => r.id === REQUEST_BY_STATUS.PENDING);
+    const request = state.requests.find((stored) => stored.id === REQUEST_BY_STATUS.PENDING);
     if (!request) throw new Error('missing fixture');
     request.status = 'REJECTED';
     request.rejection_reason = 'Rejeitada por outra pessoa';
@@ -168,7 +170,7 @@ describe('RequestDetailPage', () => {
     await user.click(dialog.getByRole('button', { name: 'Confirmar pagamento' }));
 
     expect(await screen.findByText('Aprovada → Paga')).toBeInTheDocument();
-    expect(postsTo('/mark-paid').map((r) => r.body)).toEqual([
+    expect(postsTo('/mark-paid').map((call) => call.body)).toEqual([
       { paid_at: '2026-09-25T15:30:00-03:00', payment_reference: 'PAG-2026-0099' },
     ]);
   });
@@ -191,7 +193,7 @@ describe('RequestDetailPage', () => {
     await user.type(dialog.getByLabelText(/Referência do pagamento/), 'PAG-1');
     await user.click(dialog.getByRole('button', { name: 'Confirmar pagamento' }));
     expect(await screen.findByText('Aprovada → Paga')).toBeInTheDocument();
-    expect(postsTo('/mark-paid').map((r) => r.body)).toEqual([
+    expect(postsTo('/mark-paid').map((call) => call.body)).toEqual([
       { paid_at: '2026-09-25T15:30:00-03:00', payment_reference: 'PAG-1' },
     ]);
   });

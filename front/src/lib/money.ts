@@ -1,6 +1,6 @@
 const BRAZILIAN_AMOUNT_PATTERN = /^(?:R\$)?\s*(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?$/;
 
-export const MAX_MONEY_DIGITS = 15;
+const MAX_MONEY_DIGITS = 15;
 
 export function parseBRLToCents(text: string): number | null {
   const match = BRAZILIAN_AMOUNT_PATTERN.exec(text.trim());

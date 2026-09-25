@@ -10,7 +10,9 @@ function modal() {
 }
 
 function postsToRequests() {
-  return state.requestLog.filter((r) => r.method === 'POST' && r.url.pathname === '/api/requests');
+  return state.requestLog.filter(
+    (call) => call.method === 'POST' && call.url.pathname === '/api/requests',
+  );
 }
 
 async function fillValidForm(user: UserEvent, invoice = 'NF-2026-9001') {
@@ -39,7 +41,7 @@ describe('#10 NewRequestModal', () => {
     await user.click(screen.getByRole('button', { name: 'Enviar solicitação' }));
 
     await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/requests\/2000/));
-    expect(postsToRequests().map((r) => r.body)).toEqual([
+    expect(postsToRequests().map((call) => call.body)).toEqual([
       {
         supplier_name: 'Aurora Serviços Digitais',
         supplier_cnpj: '12ABC34501DE35',

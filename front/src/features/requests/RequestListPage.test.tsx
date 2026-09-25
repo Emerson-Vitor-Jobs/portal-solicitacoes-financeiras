@@ -8,7 +8,7 @@ import { REQUESTS } from '../../test/fixtures';
 
 function lastListParams(): Record<string, string> {
   const calls = state.requestLog.filter(
-    (r) => r.method === 'GET' && r.url.pathname === '/api/requests',
+    (call) => call.method === 'GET' && call.url.pathname === '/api/requests',
   );
   const last = calls.at(-1);
   if (!last) throw new Error('no GET /api/requests call was made');
@@ -63,7 +63,7 @@ describe('RequestListPage', () => {
     await user.type(screen.getByRole('textbox', { name: 'Fornecedor' }), 'aurora');
 
     await waitFor(() => expect(lastListParams().supplier).toBe('aurora'));
-    const supplierCalls = state.requestLog.filter((r) => r.url.searchParams.has('supplier'));
+    const supplierCalls = state.requestLog.filter((call) => call.url.searchParams.has('supplier'));
     expect(supplierCalls).toHaveLength(1);
     expect(router.state.location.search).toBe('?supplier=aurora');
   });
@@ -80,7 +80,7 @@ describe('RequestListPage', () => {
 
     expect(screen.getByRole('textbox', { name: 'Fornecedor' })).toHaveValue('');
     expect(router.state.location.search).toBe('');
-    expect(state.requestLog.some((r) => r.url.searchParams.has('supplier'))).toBe(false);
+    expect(state.requestLog.some((call) => call.url.searchParams.has('supplier'))).toBe(false);
   });
 
   test('the supplier field follows the URL when it changes some other way', async () => {

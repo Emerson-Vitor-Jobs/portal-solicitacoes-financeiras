@@ -57,7 +57,7 @@ export function resetFakeApi(): void {
 }
 
 export function loginAs(email: string): User {
-  const user = USERS.find((u) => u.email === email);
+  const user = USERS.find((seedUser) => seedUser.email === email);
   if (!user) throw new Error(`unknown fixture user: ${email}`);
   state.currentUser = user;
   return user;
@@ -81,16 +81,16 @@ function withoutAccents(text: string): string {
     .toLowerCase();
 }
 
-function toListItem(r: RequestDetail): Schemas['RequestListItem'] {
+function toListItem(stored: RequestDetail): Schemas['RequestListItem'] {
   return {
-    id: r.id,
-    supplier_name: r.supplier_name,
-    invoice_number: r.invoice_number,
-    amount_cents: r.amount_cents,
-    due_date: r.due_date,
-    status: r.status,
-    is_overdue: r.is_overdue,
-    requester: r.requester,
+    id: stored.id,
+    supplier_name: stored.supplier_name,
+    invoice_number: stored.invoice_number,
+    amount_cents: stored.amount_cents,
+    due_date: stored.due_date,
+    status: stored.status,
+    is_overdue: stored.is_overdue,
+    requester: stored.requester,
   };
 }
 
@@ -141,7 +141,7 @@ export const handlers = [
 
   http.post('*/api/auth/login', async ({ request }) => {
     const body = (await request.json()) as { email: string; password: string };
-    const user = USERS.find((u) => u.email === body.email);
+    const user = USERS.find((seedUser) => seedUser.email === body.email);
     if (!user || SEED_PASSWORDS[user.email] !== body.password) {
       return problem(401, 'INVALID_CREDENTIALS', 'E-mail ou senha inválidos.');
     }
@@ -180,13 +180,13 @@ export const handlers = [
     const pageSize = Number(params.get('page_size') ?? '20');
 
     const filtered = state.requests
-      .filter((r) => visibleTo(user, r))
-      .filter((r) => (status ? r.status === status : true))
-      .filter((r) =>
-        supplier ? withoutAccents(r.supplier_name).includes(withoutAccents(supplier)) : true,
+      .filter((stored) => visibleTo(user, stored))
+      .filter((stored) => (status ? stored.status === status : true))
+      .filter((stored) =>
+        supplier ? withoutAccents(stored.supplier_name).includes(withoutAccents(supplier)) : true,
       )
-      .filter((r) => (dueFrom ? r.due_date >= dueFrom : true))
-      .filter((r) => (dueTo ? r.due_date <= dueTo : true))
+      .filter((stored) => (dueFrom ? stored.due_date >= dueFrom : true))
+      .filter((stored) => (dueTo ? stored.due_date <= dueTo : true))
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
     const total = filtered.length;
@@ -203,7 +203,9 @@ export const handlers = [
   http.get('*/api/requests/:id', ({ params }) => {
     const user = state.currentUser;
     if (!user) return unauthenticated();
-    const found = state.requests.find((r) => r.id === params.id && visibleTo(user, r));
+    const found = state.requests.find(
+      (stored) => stored.id === params.id && visibleTo(user, stored),
+    );
     if (!found) return problem(404, 'NOT_FOUND', 'Solicitação não encontrada.');
     return json<RequestDetail>(found);
   }),
@@ -217,7 +219,9 @@ export const handlers = [
       'id' | 'requester' | 'status' | 'history'
     >;
     const duplicate = state.requests.some(
-      (r) => r.supplier_cnpj === body.supplier_cnpj && r.invoice_number === body.invoice_number,
+      (stored) =>
+        stored.supplier_cnpj === body.supplier_cnpj &&
+        stored.invoice_number === body.invoice_number,
     );
     if (duplicate) {
       return problem(409, 'DUPLICATE_INVOICE', 'Já existe uma solicitação com este CNPJ e nota.');
@@ -262,7 +266,7 @@ export const handlers = [
     const user = state.currentUser;
     if (!user) return unauthenticated();
     if (user.role !== 'FINANCE') return problem(403, 'FORBIDDEN', 'Só o financeiro decide.');
-    const found = state.requests.find((r) => r.id === params.id);
+    const found = state.requests.find((stored) => stored.id === params.id);
     if (!found) return problem(404, 'NOT_FOUND', 'Solicitação não encontrada.');
     const body = (await request.json()) as { decision: 'APPROVE' | 'REJECT'; reason?: string };
     if (body.decision === 'REJECT' && !body.reason?.trim()) {
@@ -286,7 +290,7 @@ export const handlers = [
     const user = state.currentUser;
     if (!user) return unauthenticated();
     if (user.role !== 'FINANCE') return problem(403, 'FORBIDDEN', 'Só o financeiro paga.');
-    const found = state.requests.find((r) => r.id === params.id);
+    const found = state.requests.find((stored) => stored.id === params.id);
     if (!found) return problem(404, 'NOT_FOUND', 'Solicitação não encontrada.');
     const body = (await request.json()) as { paid_at: string; payment_reference: string };
     if (found.status !== 'APPROVED') {

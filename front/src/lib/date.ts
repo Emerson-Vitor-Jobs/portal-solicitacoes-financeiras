@@ -1,4 +1,4 @@
-export const TIME_ZONE = 'America/Sao_Paulo';
+const TIME_ZONE = 'America/Sao_Paulo';
 
 const BUSINESS_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const COMPETENCE_PATTERN = /^(\d{4})-(\d{2})$/;
