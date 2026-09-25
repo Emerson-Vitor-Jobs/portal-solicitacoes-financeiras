@@ -1,6 +1,8 @@
 // Setup recomendado pela documentação do Mantine para Vitest + jsdom.
 import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
+import { resetFakeApi } from '../src/test/fake-api';
+import { server } from './msw';
 
 const getComputedStyle = window.getComputedStyle.bind(window);
 window.getComputedStyle = (elt) => getComputedStyle(elt);
@@ -26,3 +28,10 @@ class ResizeObserver {
   disconnect() {}
 }
 window.ResizeObserver = ResizeObserver;
+
+// API mockada com MSW (a API real responde 501 durante o desenvolvimento do front). Qualquer
+// chamada sem handler falha o teste, em vez de passar em silêncio.
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => resetFakeApi());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
