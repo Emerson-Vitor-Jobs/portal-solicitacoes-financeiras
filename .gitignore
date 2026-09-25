@@ -1,0 +1,14 @@
+# Enunciado do desafio (material de referência local, não faz parte da entrega)
+documentos/
+
+# Dependências e build
+node_modules/
+dist/
+coverage/
+
+# Ambiente local (o versionado é o .env.example)
+.env
+
+# Sistema / editor
+*.log
+.DS_Store
