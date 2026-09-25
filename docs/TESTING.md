@@ -1,6 +1,6 @@
 # Testes
 
-**280 testes** automatizados: 148 no back (116 unitários + 32 de integração no PostgreSQL real) e 132 no front.
+**283 testes** automatizados: 151 no back (119 unitários + 32 de integração no PostgreSQL real) e 132 no front.
 
 ```bash
 docker compose --profile test run --rm back-test    # aplica as migrations no banco de teste e roda tudo

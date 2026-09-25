@@ -8,6 +8,7 @@ export async function withTransaction<T>(
   options: { isolation?: IsolationLevel; readOnly?: boolean } = {},
 ): Promise<T> {
   const client = await pool.connect();
+  let brokenConnection: Error | undefined;
   try {
     const mode = [
       `ISOLATION LEVEL ${options.isolation ?? 'READ COMMITTED'}`,
@@ -18,9 +19,14 @@ export async function withTransaction<T>(
     await client.query('COMMIT');
     return result;
   } catch (err) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      brokenConnection =
+        rollbackError instanceof Error ? rollbackError : new Error(String(rollbackError));
+    }
     throw err;
   } finally {
-    client.release();
+    client.release(brokenConnection);
   }
 }

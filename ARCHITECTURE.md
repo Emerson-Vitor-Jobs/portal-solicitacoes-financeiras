@@ -53,7 +53,7 @@ flowchart TB
   ST -. implementa .-> PORT
   ST --> Q
   S --> M
-  MAIN["app.ts / main.ts<br/>composition root: injeção manual"] -.-> R & S & ST
+  MAIN["app.ts (buildApp)<br/>composition root: injeção manual"] -.-> R & S & ST
 ```
 
 - Ports and Adapters no lado de saída: o service declara a interface de que precisa e o storage a implementa. A regra
