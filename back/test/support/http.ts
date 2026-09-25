@@ -1,4 +1,3 @@
-// Atalhos de requisição para os testes HTTP (app.inject), já com o header anti-CSRF nas escritas.
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { CSRF } from './server.js';
 

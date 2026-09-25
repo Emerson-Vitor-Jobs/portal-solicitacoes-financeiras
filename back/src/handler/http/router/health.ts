@@ -6,7 +6,6 @@ export interface HealthDeps {
   ping: () => Promise<void>;
 }
 
-// GET /api/health: usado pelo healthcheck do compose. Responde 503 se o banco não responde.
 export function healthRoutes(app: FastifyInstance, deps: HealthDeps): void {
   app.withTypeProvider<ZodTypeProvider>().get('/api/health', {
     schema: {

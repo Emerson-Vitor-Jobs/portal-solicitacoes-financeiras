@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest';
 import { STATUSES, type Status } from '../types/common.js';
 import { canTransition } from './transitions.js';
 
-// A matriz inteira, escrita à mão: 3 permitidas, 13 recusadas.
 const EXPECTED: Record<Status, Record<Status, boolean>> = {
   PENDING: { PENDING: false, APPROVED: true, REJECTED: true, PAID: false },
   APPROVED: { PENDING: false, APPROVED: false, REJECTED: false, PAID: true },

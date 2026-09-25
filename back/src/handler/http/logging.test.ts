@@ -7,7 +7,6 @@ import { SESSION_COOKIE } from './session.js';
 
 describe('política de log (§14.5)', () => {
   test('erro de banco vira só { name, code }: detail, where e valores ficam de fora', () => {
-    // Forma de um DatabaseError do pg num 23505.
     const pgError = Object.assign(new Error('duplicate key value violates unique constraint'), {
       name: 'error',
       code: '23505',

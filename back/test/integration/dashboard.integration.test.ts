@@ -1,4 +1,3 @@
-// #8 dashboard contra o oráculo oficial: data/expected_results.json, com a referência 2026-09-18.
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { readDataFile } from '../support/data.js';
@@ -67,7 +66,6 @@ describe('#8 dashboard contra o expected_results.json oficial', () => {
   });
 
   test('#12 o pagamento de 31/08 fica fora de "pago no mês" (setembro)', async () => {
-    // A solicitação 12 do seed foi paga em 2026-08-31T14:00-03:00: está PAID, mas não entra no número.
     const { rows } = await testPool().query<{ n: string }>(
       "SELECT amount_cents AS n FROM requests WHERE id = '20000000-0000-4000-8000-000000000012' AND status = 'PAID'",
     );
@@ -82,7 +80,6 @@ describe('#8 dashboard contra o expected_results.json oficial', () => {
 
   test('#12 borda do fuso: 31/08 23:59:59 em SP (já 01/09 em UTC) fica fora; 01/09 00:00 em SP entra', async () => {
     const before = await summaryAs(FERNANDA);
-    // Duas aprovadas do seed viram pagas nas bordas do mês (UPDATE em requests é permitido; a auditoria não).
     const pay = (id: string, paidAt: string) =>
       testPool().query(
         "UPDATE requests SET status = 'PAID', paid_at = $2, payment_reference = 'PAG-BORDA' WHERE id = $1 RETURNING amount_cents",

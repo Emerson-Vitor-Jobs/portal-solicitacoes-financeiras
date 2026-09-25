@@ -1,5 +1,3 @@
-// Os dados oficiais do desafio (data/*.json). No container de teste vêm montados em DATA_DIR;
-// localmente, ficam na raiz do repositório, ao lado de back/.
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

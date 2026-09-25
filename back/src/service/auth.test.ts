@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import { FakeAuthRepository, fakeHash, fakeVerifyPassword } from '../../test/support/fake_auth.js';
 import { ANA, FERNANDA } from '../../test/support/users.js';
-import { ABSOLUTE_TIMEOUT_MS, AuthService, IDLE_TIMEOUT_MS, TOUCH_INTERVAL_MS } from './auth.js';
+import {
+  ABSOLUTE_TIMEOUT_MS,
+  AuthService,
+  IDLE_TIMEOUT_MS,
+  LAST_SEEN_WRITE_INTERVAL_MS,
+} from './auth.js';
 import { InvalidCredentialsError, UnauthenticatedError } from './errors.js';
 
 const DUMMY = fakeHash('hash-do-usuario-ficticio');
@@ -49,7 +54,6 @@ describe('login', () => {
     await expect(service.login('ninguem@gex.test', 'errada')).rejects.toThrow(
       InvalidCredentialsError,
     );
-    // O inexistente também passa pela verificação, contra o hash fictício: os dois caminhos custam o mesmo.
     expect(verifiedHashes).toEqual([fakeHash(ANA.password), DUMMY]);
     expect(repo.sessions.size).toBe(0);
   });
@@ -86,7 +90,6 @@ describe('sessão: expiração com relógio injetado', () => {
   test('absoluta: 8 h depois do login cai mesmo com uso contínuo', async () => {
     const { token } = await service.login(ANA.email, ANA.password);
     const end = clock + ABSOLUTE_TIMEOUT_MS;
-    // Usa a cada 20 min: nunca fica ociosa.
     while (clock + 20 * MINUTE < end) {
       clock += 20 * MINUTE;
       await expect(service.authenticate(token)).resolves.toBeDefined();
@@ -102,7 +105,7 @@ describe('sessão: expiração com relógio injetado', () => {
     clock += 10_000;
     await service.authenticate(token);
     expect(repo.touches).toHaveLength(0);
-    clock += TOUCH_INTERVAL_MS;
+    clock += LAST_SEEN_WRITE_INTERVAL_MS;
     await service.authenticate(token);
     expect(repo.touches).toEqual([new Date(clock)]);
   });

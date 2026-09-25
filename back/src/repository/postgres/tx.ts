@@ -2,7 +2,6 @@ import type pg from 'pg';
 
 export type IsolationLevel = 'READ COMMITTED' | 'REPEATABLE READ' | 'SERIALIZABLE';
 
-// Executa `fn` numa transação: COMMIT se terminar, ROLLBACK se lançar (e o erro segue pro chamador).
 export async function withTransaction<T>(
   pool: pg.Pool,
   fn: (client: pg.PoolClient) => Promise<T>,

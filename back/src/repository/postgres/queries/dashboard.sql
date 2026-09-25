@@ -1,7 +1,3 @@
-/* Indicadores numa varredura só (DECISOES_FUNDACAO §14.2). A referência e os limites do mês vêm da aplicação
-   (APP_TODAY ou hoje em SP), nunca de CURRENT_DATE. "Pago no mês" é intervalo semiaberto em instantes de SP
-   ([início do mês, início do mês seguinte)), sem função em volta da coluna. Escopo: requesterId nulo = todas. */
-
 /* @name DashboardSummary */
 SELECT
   COALESCE(SUM(amount_cents) FILTER (WHERE status = 'PENDING'), 0) AS "pending_amount_cents!",

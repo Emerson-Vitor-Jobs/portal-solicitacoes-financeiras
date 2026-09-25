@@ -1,5 +1,3 @@
-// Composition root: liga storage → service → controller → rotas, com injeção manual (DECISOES_FUNDACAO §16.2).
-// Fica fora do main.ts para que o gerador do contrato (scripts/gen-openapi.ts) monte exatamente o mesmo app.
 import { randomBytes } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
@@ -33,7 +31,6 @@ export async function buildApp(
     now,
     today,
     verifyPassword,
-    // Senha aleatória descartada: o hash só existe para o login de usuário inexistente custar o mesmo (§5.2).
     dummyPasswordHash: await hashPassword(randomBytes(32).toString('base64url')),
   });
 
@@ -41,7 +38,7 @@ export async function buildApp(
   const dashboard = new DashboardService(new DashboardStorage(pool), { today });
 
   return buildServer({
-    trustProxy: config.trustProxy,
+    trustProxy: config.trustedProxyIp,
     logger: options.logger,
     logLevel: config.logLevel,
     health: { ping: () => ping(pool) },

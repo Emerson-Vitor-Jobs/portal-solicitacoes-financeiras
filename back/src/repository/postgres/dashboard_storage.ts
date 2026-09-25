@@ -1,4 +1,3 @@
-// Adaptador da porta DashboardRepository (service/dashboard.ts): uma query com FILTER, uma varredura.
 import type pg from 'pg';
 import type { DashboardRepository, SummaryScope } from '../../service/dashboard.js';
 import type { DashboardSummary } from '../../types/domain.js';
@@ -18,7 +17,6 @@ export class DashboardStorage implements DashboardRepository {
       },
       this.pool,
     );
-    // Agregação sem GROUP BY sempre devolve uma linha; sem ela, algo muito errado aconteceu.
     if (!row) throw new Error('agregação do dashboard não devolveu linha');
     return {
       pendingAmountCents: toSafeInteger(row.pending_amount_cents),

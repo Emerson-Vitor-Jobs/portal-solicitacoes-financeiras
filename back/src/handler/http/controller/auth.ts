@@ -1,4 +1,3 @@
-// Controller fino: chama o service e converte domínio → contrato (toXResponse). Nenhuma regra aqui.
 import type { FastifyReply } from 'fastify';
 import type { z } from 'zod';
 import type { AuthService } from '../../../service/auth.js';
@@ -16,7 +15,6 @@ export function toUserResponse(user: User): z.infer<typeof userSchema> {
 }
 
 export interface CookieOptions {
-  // `Secure` por env: false no compose local (http), true em produção com HTTPS (§8.4).
   secure: boolean;
 }
 
@@ -28,7 +26,6 @@ export class AuthController {
 
   async login(body: LoginBody, reply: FastifyReply): Promise<z.infer<typeof loginResponseSchema>> {
     const session = await this.auth.login(body.email, body.password);
-    // HttpOnly + SameSite=Strict + Path=/; sem o prefixo __Host- (o Chrome recusa em http://localhost, §8.4).
     reply.setCookie(SESSION_COOKIE, session.token, {
       httpOnly: true,
       sameSite: 'strict',

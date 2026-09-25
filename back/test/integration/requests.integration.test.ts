@@ -1,5 +1,3 @@
-// Solicitações contra o Postgres real: duplicidade e corrida no UNIQUE, corrida de decisões no compare-and-set,
-// auditoria append-only, papel e escopo pela API.
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { seedOfficialData, testPool } from '../support/db.js';
@@ -75,7 +73,6 @@ describe('criação', () => {
     for (let round = 0; round < 5; round++) {
       const invoice = `NF-CORRIDA-${round}`;
       const payload = { ...VALID_REQUEST, invoice_number: invoice };
-      // Cada requisição pega a própria conexão do pool: é o UNIQUE de verdade que decide.
       const results = await Promise.all([
         ana.post('/api/requests', payload),
         bruno.post('/api/requests', payload),
@@ -86,7 +83,6 @@ describe('criação', () => {
       });
       expect(await requestsWithInvoice(invoice)).toBe(1);
     }
-    // Um evento de criação por solicitação criada, nenhum do perdedor.
     expect(await countRows('SELECT count(*) AS n FROM audit_events')).toBe(5);
   });
 
@@ -126,7 +122,6 @@ describe('decisão e pagamento', () => {
       const loser = approve.statusCode === 409 ? approve : reject;
       const winner = approve.statusCode === 200 ? 'APPROVED' : 'REJECTED';
       expect(loser.json()).toMatchObject({ code: 'INVALID_TRANSITION' });
-      // O detail do perdedor diz o status que venceu (§5.5).
       expect(loser.json<{ detail: string }>().detail).toContain(winner);
       expect(
         await countRows(
@@ -200,7 +195,6 @@ describe('decisão e pagamento', () => {
     expect(future.statusCode).toBe(422);
     expect(future.json()).toMatchObject({ errors: [{ field: 'paid_at' }] });
 
-    // Sem offset (horário local ambíguo) nem chega ao service.
     const noOffset = await fernanda.post(`/api/requests/${id}/mark-paid`, {
       paid_at: '2026-09-18T10:00:00',
       payment_reference: 'PAG-1',
@@ -212,7 +206,6 @@ describe('decisão e pagamento', () => {
       paid_at: null,
     });
 
-    // APP_TODAY (18/09) no passado e aprovação agora: pagar agora passa (o caso que a 1ª versão da §6.3 barrava).
     const now = await fernanda.post(`/api/requests/${id}/mark-paid`, {
       paid_at: new Date().toISOString(),
       payment_reference: 'PAG-1',

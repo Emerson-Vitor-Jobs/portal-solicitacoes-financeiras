@@ -1,4 +1,3 @@
-// GET /api/requests sobre o seed oficial: filtros e paginação no banco, escopo por papel (§4b, §7.3).
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { SeedRequest } from '../../src/repository/postgres/seed_data.js';
@@ -57,7 +56,6 @@ describe('lista', () => {
       .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
       .map((r) => r.id);
     expect(body.data.map((r) => r.id)).toEqual(expectedOrder);
-    // #12 com a referência 18/09: as 4 vencidas do oráculo (vence hoje não conta).
     expect(body.data.filter((r) => r.is_overdue)).toHaveLength(4);
   });
 
@@ -84,7 +82,6 @@ describe('lista', () => {
     expect((await list(fernanda, `?supplier=${encodeURIComponent('%')}`)).total).toBe(0);
     expect((await list(fernanda, '?supplier=_')).total).toBe(0);
     expect((await list(fernanda, `?supplier=${encodeURIComponent('\\')}`)).total).toBe(0);
-    // E um nome que tem o caractere de verdade é achado.
     const cookie = await loginAs(app, ANA);
     await http(app, cookie).post('/api/requests', {
       ...VALID_REQUEST,

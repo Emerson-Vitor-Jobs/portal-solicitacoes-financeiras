@@ -22,7 +22,6 @@ describe('#12 bordas de data', () => {
     for (const status of ['PAID', 'REJECTED'] as const) {
       expect(isOverdue(status, '2020-01-01', '2026-09-18')).toBe(false);
     }
-    // Garante que a lista de status não cresceu sem esta regra ser revista.
     expect(STATUSES).toEqual(['PENDING', 'APPROVED', 'REJECTED', 'PAID']);
   });
 
@@ -36,7 +35,6 @@ describe('#12 bordas de data', () => {
   });
 
   test('sem APP_TODAY, a data é a de São Paulo, não a de UTC', () => {
-    // 01:30 UTC do dia 19 ainda é 22:30 do dia 18 em SP.
     expect(referenceDate(undefined, new Date('2026-09-19T01:30:00Z'))).toBe('2026-09-18');
     expect(referenceDate(undefined, new Date('2026-09-19T03:00:00Z'))).toBe('2026-09-19');
   });
@@ -45,7 +43,6 @@ describe('#12 bordas de data', () => {
     const { start, end } = monthBoundsSaoPaulo('2026-09-18');
     expect(start.toISOString()).toBe('2026-09-01T03:00:00.000Z');
     expect(end.toISOString()).toBe('2026-10-01T03:00:00.000Z');
-    // Pagamento às 23:59 de 31/08 em SP fica fora do mês de setembro.
     const lastMinuteOfAugust = new Date('2026-08-31T23:59:00-03:00');
     expect(lastMinuteOfAugust < start).toBe(true);
   });
@@ -66,13 +63,11 @@ describe('#12 bordas de data', () => {
     const start = startOfDaySaoPaulo('2018-11-04');
     expect(businessDateOf(start)).toBe('2018-11-04');
     expect(start.toISOString()).toBe('2018-11-04T03:00:00.000Z');
-    // O instante anterior ainda é o dia 03.
     expect(businessDateOf(new Date(start.getTime() - 1))).toBe('2018-11-03');
     expect(endOfDaySaoPaulo('2018-11-03').getTime()).toBe(start.getTime());
   });
 
   test('fim do horário de verão (meia-noite repetida): começa na primeira 00:00, ainda em -02:00', () => {
-    // Em 2019-02-17 o relógio voltou de 00:00 (-02) para 23:00 do dia 16 (-03).
     const start = startOfDaySaoPaulo('2019-02-17');
     expect(businessDateOf(start)).toBe('2019-02-17');
     expect(businessDateOf(new Date(start.getTime() - 1))).toBe('2019-02-16');

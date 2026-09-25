@@ -13,7 +13,6 @@ export const userSchema = z
 
 export const loginResponseSchema = z.object({ user: userSchema }).meta({ id: 'LoginResponse' });
 
-// Contexto da sessão: quem está logado + o "hoje" do servidor (§14.2).
 export const meResponseSchema = z
   .object({ user: userSchema, reference_date: businessDateSchema })
   .meta({ id: 'Me' });

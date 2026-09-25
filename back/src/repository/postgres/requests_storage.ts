@@ -1,4 +1,3 @@
-// Adaptador da porta RequestRepository (service/requests.ts) sobre as queries geradas pelo PgTyped.
 import pg from 'pg';
 import { DuplicateInvoiceError } from '../../service/errors.js';
 import type {
@@ -35,7 +34,6 @@ import { withTransaction } from './tx.js';
 
 const DUPLICATE_INVOICE_CONSTRAINT = 'requests_supplier_cnpj_invoice_number_key';
 
-// Linha → domínio. Competência: o banco guarda o dia 1 do mês, a API fala YYYY-MM (§6.1).
 function mapRequest(row: IFindRequestByIdResult): FinanceRequest {
   return {
     id: row.id,
@@ -68,7 +66,6 @@ function mapAuditEvent(row: IListAuditEventsResult): AuditEvent {
   };
 }
 
-// `%`, `_` e `\` digitados na busca são literais, não curingas (§7.3). O ILIKE usa `\` como escape padrão.
 export function escapeLike(term: string): string {
   return term.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
@@ -102,7 +99,6 @@ class PgRequestStore implements RequestStore {
         this.client,
       );
     } catch (err) {
-      // O 23505 desta constraint vira erro de domínio; qualquer outro erro segue como veio.
       if (isDuplicateInvoice(err)) throw new DuplicateInvoiceError();
       throw err;
     }
@@ -176,7 +172,6 @@ export class RequestStorage implements RequestRepository {
       dueFrom: filter.dueFrom,
       dueTo: filter.dueTo,
     };
-    // Mesmo snapshot para a página e o total: o total nunca descreve outra versão dos dados (§4b).
     return withTransaction(
       this.pool,
       async (client) => {

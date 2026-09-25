@@ -1,5 +1,3 @@
-// Casos de uso das solicitações (Transaction Script, DECISOES_FUNDACAO §16.2). A persistência entra pela porta
-// RequestRepository, declarada aqui; o adaptador PgTyped está em repository/postgres/requests_storage.ts.
 import { randomUUID } from 'node:crypto';
 import { isValidCnpj, normalizeCnpj } from '../modules/cnpj.js';
 import { isOverdue } from '../modules/date.js';
@@ -32,7 +30,6 @@ export interface NewRequest {
   description: string | null;
 }
 
-// Compare-and-set: só muda se o status ainda for `from`.
 export interface StatusChange {
   id: string;
   from: Status;
@@ -52,20 +49,15 @@ export interface NewAuditEvent {
 }
 
 export interface RequestFilter {
-  // null = todas (FINANCE); o id = só as da pessoa (REQUESTER).
   requesterId: string | null;
   status: Status | null;
-  // Termo como digitado; o escape dos curingas do LIKE é detalhe do adaptador (§7.3).
   supplier: string | null;
   dueFrom: string | null;
   dueTo: string | null;
 }
 
-// Operações que rodam dentro de uma transação aberta pelo repositório.
 export interface RequestStore {
-  // Lança DuplicateInvoiceError quando o UNIQUE (CNPJ, nota) barra o INSERT.
   insertRequest(request: NewRequest): Promise<void>;
-  // true se mudou; false se o status já não era o esperado (perdeu a corrida ou nunca foi).
   updateStatus(change: StatusChange): Promise<boolean>;
   findStatus(id: string): Promise<Status | null>;
   findTransitionInstant(requestId: string, status: Status): Promise<Date | null>;
@@ -74,16 +66,12 @@ export interface RequestStore {
   listHistory(requestId: string): Promise<AuditEvent[]>;
 }
 
-// Porta de saída (o consumidor define a interface).
 export interface RequestRepository {
-  // Tudo ou nada: COMMIT se `fn` terminar, ROLLBACK se lançar.
   inTransaction<T>(fn: (store: RequestStore) => Promise<T>): Promise<T>;
-  // Página e total no mesmo snapshot (§4b).
   list(
     filter: RequestFilter,
     page: { limit: number; offset: number },
   ): Promise<{ items: FinanceRequest[]; total: number }>;
-  // Solicitação e histórico no mesmo snapshot.
   findDetail(id: string): Promise<{ request: FinanceRequest; history: AuditEvent[] } | null>;
 }
 
@@ -122,16 +110,13 @@ export interface MarkPaidInput {
 }
 
 export interface RequestServiceDeps {
-  // A data de referência (APP_TODAY ou hoje em SP), relida a cada operação.
   today: () => string;
-  // Relógio real (injetável): "pagamento futuro" é fato do relógio, não do calendário de referência (§6.3).
   now: () => Date;
   newId?: () => string;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Número da nota na forma canônica do UNIQUE (§7.2). Hífen e espaço interno ficam: são parte do número.
 export function normalizeInvoiceNumber(value: string): string {
   return value.trim().toUpperCase();
 }
@@ -163,7 +148,6 @@ export class RequestService {
     const description = input.description?.trim() || null;
     const id = this.newId();
 
-    // Sem "verificar antes de inserir": quem garante a unicidade, inclusive em corrida, é o UNIQUE do banco.
     const detail = await this.repo.inTransaction(async (store) => {
       await store.insertRequest({
         id,
@@ -213,7 +197,6 @@ export class RequestService {
     };
   }
 
-  // Inexistente, alheia (para REQUESTER) ou id que não é UUID: o mesmo 404 (§5.4, §5.8).
   async get(actor: User, id: string): Promise<RequestDetail> {
     if (!UUID.test(id)) throw new NotFoundError();
     const found = await this.repo.findDetail(id);
@@ -238,8 +221,6 @@ export class RequestService {
     return this.transition(actor, id, 'REJECTED', { reason: trimmed, rejectionReason: trimmed });
   }
 
-  // Travas da data de pagamento (§6.3): nem posterior ao agora real, nem anterior à aprovação. O APP_TODAY vale só
-  // para as regras de calendário (vencido, pago no mês).
   async markPaid(actor: User, id: string, input: MarkPaidInput): Promise<RequestDetail> {
     assertRole(actor, 'FINANCE');
     const paymentReference = input.paymentReference.trim();
@@ -259,13 +240,10 @@ export class RequestService {
       'PAID',
       { reason: paymentReference, paidAt: input.paidAt, paymentReference },
       async (store) => {
-        // Lido na mesma transação do pagamento. A auditoria é append-only, então o instante não muda.
         const approvedAt = await store.findTransitionInstant(id, 'APPROVED');
         if (approvedAt === null) {
           throw new Error('invariante quebrada: solicitação aprovada sem evento de aprovação');
         }
-        // Compara na precisão que a pessoa consegue informar: o formulário tem data e hora até o MINUTO. Sem isso,
-        // aprovar às 14:51:37 e pagar "agora" (14:51, ou seja 14:51:00) seria recusado como anterior à aprovação.
         if (input.paidAt.getTime() < floorToMinute(approvedAt).getTime()) {
           throw new ValidationError([
             { field: 'paid_at', message: 'O pagamento não pode ser anterior à aprovação.' },
@@ -275,7 +253,6 @@ export class RequestService {
     );
   }
 
-  // Uma transição = compare-and-set do status + evento de auditoria, na MESMA transação (§5.5).
   private async transition(
     actor: User,
     id: string,
@@ -304,11 +281,9 @@ export class RequestService {
         paymentReference: change.paymentReference ?? null,
       });
       if (!changed) {
-        // Perdeu a corrida: outra transação mudou o status entre a leitura e o UPDATE.
         const latestStatus = await store.findStatus(id);
         throw invalidTransition(latestStatus ?? current, to);
       }
-      // Uma trava que lança aqui desfaz o UPDATE junto (ROLLBACK).
       if (afterUpdate) await afterUpdate(store);
 
       await store.insertAuditEvent({

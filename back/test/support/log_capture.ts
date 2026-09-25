@@ -1,4 +1,3 @@
-// Coletor de linhas do pino, para verificar o que vai (e o que não vai) para o log.
 import type { LogStream } from '../../src/handler/http/logging.js';
 
 export class LogCapture implements LogStream {

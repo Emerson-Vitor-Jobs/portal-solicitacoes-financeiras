@@ -1,4 +1,3 @@
-// Fake escrito à mão da porta AuthRepository (sem vi.mock): guarda tudo em memória.
 import type {
   AuthRepository,
   NewSession,
@@ -7,7 +6,6 @@ import type {
 } from '../../src/service/auth.js';
 import { SEED_USERS } from './users.js';
 
-// Hash "falso" legível: o fake de verifyPassword só compara com o prefixo. O argon2 real fica na integração.
 export const fakeHash = (password: string) => `fake:${password}`;
 export const fakeVerifyPassword = (passwordHash: string, password: string) =>
   Promise.resolve(passwordHash === fakeHash(password));

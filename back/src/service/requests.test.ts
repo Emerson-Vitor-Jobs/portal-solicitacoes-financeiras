@@ -135,7 +135,6 @@ describe('#5 transições pelo service: cada status × cada ação', () => {
         } else {
           const err = await actions[to](ID).catch((e: unknown) => e);
           expect(err).toBeInstanceOf(InvalidTransitionError);
-          // O detail traz o status atual (§5.5).
           expect((err as Error).message).toBe(
             `A solicitação está ${from}; não pode ir para ${to}.`,
           );
@@ -199,7 +198,6 @@ describe('#14 travas da data de pagamento', () => {
     const paid = await pay(clock.toISOString());
     expect(paid).toMatchObject({ status: 'PAID', paymentReference: 'PAG-77' });
     expect(paid.paidAt?.toISOString()).toBe(clock.toISOString());
-    // Auditoria: a referência do pagamento vai no reason (como no seed).
     expect(paid.history.at(-1)).toMatchObject({ newStatus: 'PAID', reason: 'PAG-77' });
   });
 
@@ -231,7 +229,6 @@ describe('#14 travas da data de pagamento', () => {
   });
 
   test('aprovar e pagar no mesmo minuto: a hora do formulário (sem segundos) é aceita', async () => {
-    // O formulário informa até o minuto: aprovado às 14:51:37, "agora" no modal é 14:51 (= 14:51:00).
     clock = new Date('2026-09-25T14:52:10-03:00');
     seedIn('APPROVED');
     repo.events.at(-1)!.createdAt = new Date('2026-09-25T14:51:37-03:00');
@@ -246,7 +243,6 @@ describe('#14 travas da data de pagamento', () => {
   });
 
   test('APP_TODAY no passado e aprovação "agora": pagar "agora" é aceito', async () => {
-    // Referência 18/09 (today), relógio real 25/09: a aprovação real foi agora há pouco.
     clock = new Date('2026-09-25T15:00:00-03:00');
     seedIn('APPROVED');
     repo.events.at(-1)!.createdAt = new Date('2026-09-25T14:59:00-03:00');

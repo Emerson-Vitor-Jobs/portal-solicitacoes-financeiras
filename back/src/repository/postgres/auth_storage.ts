@@ -1,4 +1,3 @@
-// Adaptador da porta AuthRepository (service/auth.ts) sobre as queries geradas pelo PgTyped.
 import type pg from 'pg';
 import type {
   AuthRepository,

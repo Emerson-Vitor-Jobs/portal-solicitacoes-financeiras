@@ -1,4 +1,3 @@
-// App HTTP montado com fakes (sem banco), para os testes com app.inject().
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import type { LoginRateLimit } from '../../src/config.js';
 import { AuthController } from '../../src/handler/http/controller/auth.js';
@@ -20,10 +19,8 @@ import { FakeRequestRepository } from './fake_requests.js';
 
 export const CSRF = { [CSRF_HEADER]: CSRF_VALUE };
 
-// Limites altos: os testes que não são do rate limit logam várias vezes com o mesmo e-mail.
 export const RELAXED_RATE_LIMIT: LoginRateLimit = { perEmail: 1000, perIp: 1000, windowMs: 60_000 };
 
-// Fake da porta do dashboard: devolve números fixos e guarda o escopo recebido.
 export class FakeDashboardRepository implements DashboardRepository {
   readonly scopes: SummaryScope[] = [];
 
@@ -85,7 +82,6 @@ export async function buildTestServer(options: TestServerOptions = {}): Promise<
   return { app, authRepo, requestRepo, dashboardRepo };
 }
 
-// Faz login pela API e devolve o header Cookie pronto para as próximas requisições.
 export async function loginAs(
   app: FastifyInstance,
   user: { email: string; password: string },

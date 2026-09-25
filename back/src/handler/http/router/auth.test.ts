@@ -79,7 +79,6 @@ describe('rate limit do login', () => {
       loginRateLimit: { perEmail: 5, perIp: 100, windowMs: 15 * 60_000 },
     }));
     for (let i = 0; i < 5; i++) {
-      // Variações de caixa caem no mesmo balde (e-mail normalizado).
       const res = await login(app, i % 2 ? 'NINGUEM@gex.test' : 'ninguem@gex.test', 'x');
       expect(res.statusCode).toBe(401);
     }
@@ -93,7 +92,6 @@ describe('rate limit do login', () => {
       code: 'TOO_MANY_REQUESTS',
       title: 'Too Many Requests',
     });
-    // Outro e-mail, mesmo IP, ainda passa: o balde é por conta.
     expect((await login(app, ANA.email, ANA.password)).statusCode).toBe(200);
   });
 
@@ -107,7 +105,6 @@ describe('rate limit do login', () => {
     const blocked = await login(app, 'conta-nova@gex.test', 'x');
     expect(blocked.statusCode).toBe(429);
     expect(blocked.headers['retry-after']).toBeDefined();
-    // Outro IP não é afetado.
     const otherIp = await app.inject({
       method: 'POST',
       url: '/api/auth/login',

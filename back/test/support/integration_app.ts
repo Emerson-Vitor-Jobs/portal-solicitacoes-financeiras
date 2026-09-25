@@ -1,4 +1,3 @@
-// O app de verdade (storages PgTyped + argon2) sobre o banco de teste, para app.inject().
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../../src/app.js';
 import type { LogStream } from '../../src/handler/http/logging.js';
@@ -11,7 +10,7 @@ export async function buildIntegrationApp(
   const app = await buildApp(
     testPool(),
     {
-      trustProxy: false,
+      trustedProxyIp: false,
       appToday: options.appToday ?? '2026-09-18',
       cookieSecure: false,
       loginRateLimit: RELAXED_RATE_LIMIT,
