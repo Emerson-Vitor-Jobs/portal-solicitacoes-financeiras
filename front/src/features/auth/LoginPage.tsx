@@ -71,17 +71,17 @@ export function LoginPage() {
   const { errors } = form.formState;
 
   return (
-    // Fundo creme da marca, com a ilustração ao lado do formulário (some em telas estreitas), como a tela de
+    // Fundo creme da marca, com a ilustração ao lado do formulário (some só no celular), como a tela de
     // entrada do sistema visual (§17).
     <Center mih="100vh" p="md" bg={palette.cream}>
       <SimpleGrid
-        cols={{ base: 1, md: 2 }}
+        cols={{ base: 1, sm: 2 }}
         spacing={48}
         w="100%"
         maw={960}
         style={{ alignItems: 'center' }}
       >
-        <Stack visibleFrom="md" gap="md">
+        <Stack visibleFrom="sm" gap="md">
           <Image src={illustration} alt="" maw={360} />
           <Title order={1} size="h2">
             Portal de Solicitações Financeiras
