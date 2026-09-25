@@ -1,5 +1,4 @@
 import {
-  Alert,
   Anchor,
   Button,
   Card,
@@ -19,16 +18,16 @@ import { useDebouncedCallback } from '@mantine/hooks';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { errorMessage } from '../../api/errors';
 import { BusinessDateInput } from '../../components/BusinessDateInput';
 import { OverdueBadge } from '../../components/OverdueBadge';
+import { QueryErrorAlert } from '../../components/QueryErrorAlert';
 import { StatusBadge } from '../../components/StatusBadge';
 import { formatBusinessDate } from '../../lib/date';
-import { enumValues, STATUS_LABELS } from '../../lib/labels';
+import { enumOptions, STATUS_LABELS } from '../../lib/labels';
 import { formatCents } from '../../lib/money';
 import emptyIllustration from '../../assets/doodles/unboxing.svg';
 import { palette } from '../../theme';
-import { useSession } from '../auth/session';
+import { NewRequestButton } from './NewRequestButton';
 import { fetchRequests, requestKeys, type RequestListItem } from './api';
 import {
   hasAnyFilter,
@@ -39,10 +38,7 @@ import {
   type FilterName,
 } from './list-params';
 
-const STATUS_OPTIONS = enumValues(STATUS_LABELS).map((value) => ({
-  value,
-  label: STATUS_LABELS[value],
-}));
+const STATUS_OPTIONS = enumOptions(STATUS_LABELS);
 
 const SUPPLIER_DEBOUNCE_MS = 400;
 
@@ -106,7 +102,6 @@ function RequestRow({ item }: { item: RequestListItem }) {
 }
 
 export function RequestListPage() {
-  const { user } = useSession();
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = parseListParams(searchParams);
   const listQuery = toListQuery(filters);
@@ -134,11 +129,7 @@ export function RequestListPage() {
     <Stack>
       <Group justify="space-between">
         <Title order={2}>Solicitações</Title>
-        {user.role === 'REQUESTER' && (
-          <Button component={Link} to="/requests/new">
-            Nova solicitação
-          </Button>
-        )}
+        <NewRequestButton />
       </Group>
 
       <Card>
@@ -191,14 +182,11 @@ export function RequestListPage() {
       )}
 
       {list.isError && (
-        <Alert color="red" title="Não foi possível carregar as solicitações">
-          <Stack gap="xs" align="flex-start">
-            {errorMessage(list.error)}
-            <Button size="xs" variant="light" onClick={() => void list.refetch()}>
-              Tentar novamente
-            </Button>
-          </Stack>
-        </Alert>
+        <QueryErrorAlert
+          title="Não foi possível carregar as solicitações"
+          error={list.error}
+          onRetry={() => void list.refetch()}
+        />
       )}
 
       {list.isSuccess && list.data.data.length === 0 && (

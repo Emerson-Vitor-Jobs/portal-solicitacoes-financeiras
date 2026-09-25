@@ -1,6 +1,7 @@
 import { isBusinessDate } from '../../lib/date';
 import { isEnumValue, STATUS_LABELS } from '../../lib/labels';
-import type { ListQuery, RequestStatus } from './api';
+import type { RequestStatus } from '../../api/types';
+import type { ListQuery } from './api';
 
 export const PAGE_SIZE = 20;
 

@@ -19,6 +19,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { z } from 'zod';
 import { errorMessage, hasCode, isApiError, tooManyRequestsMessage } from '../../api/errors';
 import illustration from '../../assets/doodles/sitting-reading.svg';
+import { applyFieldErrors, type ApiFieldMap } from '../../lib/form-errors';
 import { palette } from '../../theme';
 import { login, sessionQueryKey } from './api';
 import type { LoginLocationState } from './SessionExpiryListener';
@@ -28,6 +29,8 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Informe a senha.'),
 });
 type LoginForm = z.infer<typeof loginSchema>;
+
+const LOGIN_FIELD_MAP: ApiFieldMap<LoginForm> = { email: 'email', password: 'password' };
 
 // Mensagem do erro do login. Credencial inválida não diz qual dos dois campos errou (§5.2).
 function loginErrorMessage(error: unknown): string {
@@ -58,11 +61,7 @@ export function LoginPage() {
     },
     onError: (error) => {
       if (isApiError(error) && error.code === 'VALIDATION_FAILED') {
-        for (const fieldError of error.fieldErrors) {
-          if (fieldError.field === 'email' || fieldError.field === 'password') {
-            form.setError(fieldError.field, { message: fieldError.message });
-          }
-        }
+        applyFieldErrors(form.setError, error.fieldErrors, LOGIN_FIELD_MAP);
       }
     },
   });

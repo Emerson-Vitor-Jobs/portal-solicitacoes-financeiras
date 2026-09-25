@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Alert, Button, Group, Modal, Stack, Text, Textarea, TextInput } from '@mantine/core';
+import { Alert, Group, Modal, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { TimeInput } from '@mantine/dates';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { errorMessage, isApiError } from '../../api/errors';
 import { BusinessDateInput } from '../../components/BusinessDateInput';
+import { ModalActions } from '../../components/ModalActions';
 import {
   formatBusinessDate,
   isBusinessDate,
@@ -13,24 +14,32 @@ import {
   nowInSaoPaulo,
   toSaoPauloRfc3339,
 } from '../../lib/date';
+import { applyFieldErrors, type ApiFieldMap } from '../../lib/form-errors';
 import { formatCents } from '../../lib/money';
+import { palette } from '../../theme';
 import { decideRequest, markRequestPaid, type RequestDetail } from './api';
 import { useRequestAction } from './use-request-action';
 
 type ModalProps = { request: RequestDetail; onClose: () => void };
 
-// Erro que não aparece num campo do modal: 403, 500, 422 sem errors[] ou 422 em campo que o modal
-// não tem (`mappedFields` são os campos que o próprio modal mostra). O 409 fecha o modal antes.
-function MutationError({ error, mappedFields }: { error: unknown; mappedFields: string[] }) {
+function NonFieldMutationError({
+  error,
+  fieldMap,
+}: {
+  error: unknown;
+  fieldMap: Readonly<Record<string, string>>;
+}) {
   if (error === null) return null;
   if (isApiError(error) && error.code === 'VALIDATION_FAILED' && error.fieldErrors.length > 0) {
-    const unmapped = error.fieldErrors.filter((e) => !mappedFields.includes(e.field));
-    if (unmapped.length === 0) return null;
+    const unmatched = error.fieldErrors.filter(
+      (fieldError) => !Object.hasOwn(fieldMap, fieldError.field),
+    );
+    if (unmatched.length === 0) return null;
     return (
       <Alert color="red" role="alert" title="Dados inválidos">
-        {unmapped.map((e) => (
-          <Text key={`${e.field}:${e.message}`} size="sm">
-            {e.message}
+        {unmatched.map((fieldError) => (
+          <Text key={`${fieldError.field}:${fieldError.message}`} size="sm">
+            {fieldError.message}
           </Text>
         ))}
       </Alert>
@@ -43,7 +52,7 @@ function MutationError({ error, mappedFields }: { error: unknown; mappedFields: 
   );
 }
 
-function Summary({ request }: { request: RequestDetail }) {
+function RequestSummary({ request }: { request: RequestDetail }) {
   return (
     <Text size="sm">
       {request.supplier_name} · nota {request.invoice_number} · {formatCents(request.amount_cents)}
@@ -51,37 +60,28 @@ function Summary({ request }: { request: RequestDetail }) {
   );
 }
 
+const NO_FIELDS = {};
+
 export function ApproveModal({ request, onClose }: ModalProps) {
   const { mutation, submit } = useRequestAction(request.id, decideRequest, {
     successMessage: 'Solicitação aprovada.',
-    onDone: onClose,
+    onClose,
   });
   return (
     <Modal opened onClose={onClose} title="Aprovar solicitação">
       <Stack>
-        <Summary request={request} />
-        <MutationError error={mutation.error} mappedFields={[]} />
-        <Group justify="flex-end">
-          <Button variant="default" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            color="ink"
-            loading={mutation.isPending}
-            disabled={mutation.isPending}
-            onClick={() => submit({ decision: 'APPROVE' })}
-          >
-            Confirmar aprovação
-          </Button>
-        </Group>
+        <RequestSummary request={request} />
+        <NonFieldMutationError error={mutation.error} fieldMap={NO_FIELDS} />
+        <ModalActions
+          confirmLabel="Confirmar aprovação"
+          loading={mutation.isPending}
+          onCancel={onClose}
+          onConfirm={() => submit({ decision: 'APPROVE' })}
+        />
       </Stack>
     </Modal>
   );
 }
-
-// Campos do contrato que cada modal mostra no próprio campo.
-const REJECT_FIELDS = ['reason'];
-const MARK_PAID_FIELDS = ['paid_at', 'payment_reference'];
 
 const rejectSchema = z.object({
   reason: z
@@ -92,6 +92,8 @@ const rejectSchema = z.object({
 });
 type RejectForm = z.infer<typeof rejectSchema>;
 
+const REJECT_FIELD_MAP: ApiFieldMap<RejectForm> = { reason: 'reason' };
+
 export function RejectModal({ request, onClose }: ModalProps) {
   const form = useForm<RejectForm>({
     resolver: zodResolver(rejectSchema),
@@ -99,11 +101,8 @@ export function RejectModal({ request, onClose }: ModalProps) {
   });
   const { mutation, submit } = useRequestAction(request.id, decideRequest, {
     successMessage: 'Solicitação rejeitada.',
-    onDone: onClose,
-    onFieldErrors: (errors) => {
-      for (const e of errors)
-        if (e.field === 'reason') form.setError('reason', { message: e.message });
-    },
+    onClose,
+    onFieldErrors: (fieldErrors) => applyFieldErrors(form.setError, fieldErrors, REJECT_FIELD_MAP),
   });
   const onSubmit = form.handleSubmit(({ reason }) => submit({ decision: 'REJECT', reason }));
 
@@ -111,8 +110,8 @@ export function RejectModal({ request, onClose }: ModalProps) {
     <Modal opened onClose={onClose} title="Rejeitar solicitação">
       <form noValidate onSubmit={(event) => void onSubmit(event)}>
         <Stack>
-          <Summary request={request} />
-          <MutationError error={mutation.error} mappedFields={REJECT_FIELDS} />
+          <RequestSummary request={request} />
+          <NonFieldMutationError error={mutation.error} fieldMap={REJECT_FIELD_MAP} />
           <Textarea
             label="Motivo da rejeição"
             withAsterisk
@@ -120,36 +119,26 @@ export function RejectModal({ request, onClose }: ModalProps) {
             {...form.register('reason')}
             error={form.formState.errors.reason?.message}
           />
-          <Group justify="flex-end">
-            <Button variant="default" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              color="#B42318"
-              loading={mutation.isPending}
-              disabled={mutation.isPending}
-            >
-              Confirmar rejeição
-            </Button>
-          </Group>
+          <ModalActions
+            confirmLabel="Confirmar rejeição"
+            confirmColor={palette.danger}
+            loading={mutation.isPending}
+            onCancel={onClose}
+          />
         </Stack>
       </form>
     </Modal>
   );
 }
 
-// Data e hora do pagamento, lidas em America/Sao_Paulo (§6.2). "Futuro" é pelo relógio real, não
-// pela reference_date (§6.3 revisada): o limite da data é o hoje real em SP. É só dica de UX; as
-// travas de verdade (futuro, antes da aprovação) são do back e voltam como 422 em paid_at.
 function markPaidSchema(today: string) {
   return z.object({
     paid_date: z
       .string()
       .nullable()
-      .refine((v) => v !== null && isBusinessDate(v), 'Informe a data do pagamento.')
+      .refine((value) => value !== null && isBusinessDate(value), 'Informe a data do pagamento.')
       .refine(
-        (v) => v === null || v <= today,
+        (value) => value === null || value <= today,
         `A data não pode passar de hoje (${formatBusinessDate(today)}).`,
       ),
     paid_time: z.string().refine(isTime, 'Informe a hora (hh:mm).'),
@@ -162,24 +151,22 @@ function markPaidSchema(today: string) {
 }
 type MarkPaidForm = z.infer<ReturnType<typeof markPaidSchema>>;
 
+const MARK_PAID_FIELD_MAP: ApiFieldMap<MarkPaidForm> = {
+  paid_at: 'paid_date',
+  payment_reference: 'payment_reference',
+};
+
 export function MarkPaidModal({ request, onClose }: ModalProps) {
-  // "Agora" real em SP, lido uma vez ao abrir o modal: pré-preenche data e hora e limita a data.
-  const [now] = useState(() => nowInSaoPaulo());
+  const [openedAt] = useState(() => nowInSaoPaulo());
   const form = useForm<MarkPaidForm>({
-    resolver: zodResolver(markPaidSchema(now.date)),
-    defaultValues: { paid_date: now.date, paid_time: now.time, payment_reference: '' },
+    resolver: zodResolver(markPaidSchema(openedAt.date)),
+    defaultValues: { paid_date: openedAt.date, paid_time: openedAt.time, payment_reference: '' },
   });
   const { mutation, submit } = useRequestAction(request.id, markRequestPaid, {
     successMessage: 'Pagamento registrado.',
-    onDone: onClose,
-    onFieldErrors: (errors) => {
-      for (const e of errors) {
-        if (e.field === 'paid_at') form.setError('paid_date', { message: e.message });
-        if (e.field === 'payment_reference') {
-          form.setError('payment_reference', { message: e.message });
-        }
-      }
-    },
+    onClose,
+    onFieldErrors: (fieldErrors) =>
+      applyFieldErrors(form.setError, fieldErrors, MARK_PAID_FIELD_MAP),
   });
   const onSubmit = form.handleSubmit((values) => {
     if (values.paid_date === null) return;
@@ -194,8 +181,8 @@ export function MarkPaidModal({ request, onClose }: ModalProps) {
     <Modal opened onClose={onClose} title="Registrar pagamento">
       <form noValidate onSubmit={(event) => void onSubmit(event)}>
         <Stack>
-          <Summary request={request} />
-          <MutationError error={mutation.error} mappedFields={MARK_PAID_FIELDS} />
+          <RequestSummary request={request} />
+          <NonFieldMutationError error={mutation.error} fieldMap={MARK_PAID_FIELD_MAP} />
           <Group grow align="flex-start">
             <Controller
               control={form.control}
@@ -204,7 +191,7 @@ export function MarkPaidModal({ request, onClose }: ModalProps) {
                 <BusinessDateInput
                   label="Data do pagamento"
                   withAsterisk
-                  maxDate={now.date}
+                  maxDate={openedAt.date}
                   name={field.name}
                   ref={field.ref}
                   value={field.value}
@@ -228,19 +215,11 @@ export function MarkPaidModal({ request, onClose }: ModalProps) {
             {...form.register('payment_reference')}
             error={errors.payment_reference?.message}
           />
-          <Group justify="flex-end">
-            <Button variant="default" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              color="ink"
-              loading={mutation.isPending}
-              disabled={mutation.isPending}
-            >
-              Confirmar pagamento
-            </Button>
-          </Group>
+          <ModalActions
+            confirmLabel="Confirmar pagamento"
+            loading={mutation.isPending}
+            onCancel={onClose}
+          />
         </Stack>
       </form>
     </Modal>

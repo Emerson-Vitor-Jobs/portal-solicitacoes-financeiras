@@ -1,10 +1,9 @@
 import { api, unwrap } from '../../api/client';
-import type { components } from '../../api/schema';
+import type { components, paths } from '../../api/schema';
 
 export type Me = components['schemas']['Me'];
-export type User = components['schemas']['User'];
-export type Role = components['schemas']['Role'];
-export type LoginBody = { email: string; password: string };
+export type LoginBody =
+  paths['/api/auth/login']['post']['requestBody']['content']['application/json'];
 
 export const sessionQueryKey = ['session'] as const;
 

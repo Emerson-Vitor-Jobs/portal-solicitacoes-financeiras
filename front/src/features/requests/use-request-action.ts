@@ -7,16 +7,10 @@ import { requestKeys, type RequestDetail } from './api';
 
 type Options = {
   successMessage: string;
-  // Fecha o modal (sucesso ou conflito de estado).
-  onDone: () => void;
-  // Erros por campo do 422, para o formulário do modal.
-  onFieldErrors?: (errors: FieldError[]) => void;
+  onClose: () => void;
+  onFieldErrors?: (fieldErrors: FieldError[]) => void;
 };
 
-// Mutação de uma ação de status (aprovar, rejeitar, pagar), com o tratamento comum:
-// - sucesso: o detalhe vem no corpo (200), atualiza o cache sem GET extra e marca lista e painel;
-// - 409 INVALID_TRANSITION (transição inválida ou perdeu a corrida, §5.5): avisa e recarrega;
-// - 422: devolve os errors[] ao formulário; o resto fica em `mutation.error` para o modal mostrar.
 export function useRequestAction<TBody>(
   id: string,
   call: (id: string, body: TBody) => Promise<RequestDetail>,
@@ -30,7 +24,7 @@ export function useRequestAction<TBody>(
     onSuccess: async (updated) => {
       queryClient.setQueryData(requestKeys.detail(id), updated);
       notifications.show({ color: 'green', message: options.successMessage });
-      options.onDone();
+      options.onClose();
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: requestKeys.lists }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKey }),
@@ -43,7 +37,7 @@ export function useRequestAction<TBody>(
           title: 'A solicitação mudou de status',
           message: 'Outra pessoa alterou esta solicitação antes. Os dados foram recarregados.',
         });
-        options.onDone();
+        options.onClose();
         await queryClient.invalidateQueries({ queryKey: requestKeys.all });
         return;
       }
@@ -55,7 +49,6 @@ export function useRequestAction<TBody>(
   });
 
   function submit(body: TBody): void {
-    // Anti-duplo-envio: o segundo clique não chega à API.
     if (!lock.tryAcquire()) return;
     mutation.mutate(body);
   }

@@ -1,7 +1,7 @@
 .navlink {
-  --nl-color: #0b0a0a;
-  --nl-hover: #ffffff;
-  border-radius: 10px;
+  --nl-color: var(--app-color-ink);
+  --nl-hover: var(--mantine-color-white);
+  border-radius: var(--app-brutal-radius-small);
   border: 2px solid transparent;
   font-weight: 500;
   transition:
@@ -10,18 +10,17 @@
 }
 
 .navlink:hover {
-  border-color: #0b0a0a;
+  border-color: var(--app-color-ink);
 }
 
 .navlink[aria-current='page'] {
-  --nl-bg: #fff2cf;
-  --nl-color: #0b0a0a;
-  --nl-hover: #fff2cf;
-  border-color: #0b0a0a;
-  box-shadow: 3px 3px 0 #0b0a0a;
+  --nl-bg: var(--app-color-highlight);
+  --nl-hover: var(--app-color-highlight);
+  border-color: var(--app-color-ink);
+  box-shadow: 3px 3px 0 var(--app-color-ink);
 }
 
 .navlink:active {
   transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 #0b0a0a;
+  box-shadow: 1px 1px 0 var(--app-color-ink);
 }

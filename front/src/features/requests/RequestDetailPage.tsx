@@ -16,6 +16,7 @@ import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { errorMessage, hasCode } from '../../api/errors';
 import { OverdueBadge } from '../../components/OverdueBadge';
+import { QueryErrorAlert } from '../../components/QueryErrorAlert';
 import { StatusBadge } from '../../components/StatusBadge';
 import { formatCnpj } from '../../lib/cnpj';
 import { formatBusinessDate, formatCompetence, formatInstant } from '../../lib/date';
@@ -78,7 +79,7 @@ function RequestData({ request }: { request: RequestDetail }) {
 // Histórico só de leitura (a auditoria não é editável pela interface).
 function History({ request }: { request: RequestDetail }) {
   if (request.history.length === 0) {
-    return <Text c="dimmed">Sem eventos registrados.</Text>;
+    return <Text c={palette.textSecondary}>Sem eventos registrados.</Text>;
   }
   return (
     <Timeline active={request.history.length - 1} bulletSize={14} lineWidth={2}>
@@ -91,7 +92,7 @@ function History({ request }: { request: RequestDetail }) {
               : `${STATUS_LABELS[event.previous_status]} → ${STATUS_LABELS[event.new_status]}`
           }
         >
-          <Text size="sm" c="dimmed">
+          <Text size="sm" c={palette.textSecondary}>
             {event.actor.name} · {formatInstant(event.created_at)}
           </Text>
           {event.reason !== null && (
@@ -136,22 +137,16 @@ export function RequestDetailPage() {
   if (detail.data === undefined) {
     const notFound = hasCode(detail.error, 'NOT_FOUND');
     return (
-      <Alert
+      <QueryErrorAlert
         color={notFound ? 'gray' : 'red'}
         title={notFound ? 'Solicitação não encontrada' : 'Não foi possível carregar a solicitação'}
+        error={notFound ? undefined : detail.error}
+        onRetry={notFound ? undefined : () => void detail.refetch()}
       >
-        <Stack gap="xs" align="flex-start">
-          {!notFound && errorMessage(detail.error)}
-          {!notFound && (
-            <Button size="xs" variant="light" onClick={() => void detail.refetch()}>
-              Tentar novamente
-            </Button>
-          )}
-          <Anchor component={Link} to="/requests">
-            Voltar para a lista
-          </Anchor>
-        </Stack>
-      </Alert>
+        <Anchor component={Link} to="/requests">
+          Voltar para a lista
+        </Anchor>
+      </QueryErrorAlert>
     );
   }
 

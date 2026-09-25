@@ -1,0 +1,34 @@
+.outlined {
+  border: var(--app-brutal-border);
+}
+
+.bottomEdge {
+  border-bottom: var(--app-brutal-border);
+}
+
+.endEdge {
+  border-inline-end: var(--app-brutal-border);
+}
+
+.control {
+  border: var(--app-brutal-border);
+  box-shadow: var(--app-brutal-shadow-small);
+}
+
+.sidebarControl {
+  border: var(--app-brutal-border);
+  box-shadow: var(--app-brutal-shadow-small);
+  border-radius: var(--app-brutal-radius-small);
+}
+
+.sidebarPrimaryControl {
+  border: var(--app-brutal-border);
+  box-shadow: var(--app-brutal-shadow);
+  border-radius: var(--app-brutal-radius-small);
+}
+
+.panel {
+  border: var(--app-brutal-border);
+  box-shadow: var(--app-brutal-shadow);
+  border-radius: var(--app-brutal-radius);
+}

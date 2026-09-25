@@ -1,5 +1,4 @@
 import {
-  Alert,
   Box,
   Button,
   Card,
@@ -11,15 +10,17 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { IconFileInvoice, IconPlus } from '@tabler/icons-react';
+import { IconFileInvoice } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import teamWalking from '../../assets/humaaans/team-walking.svg';
-import { useQuery } from '@tanstack/react-query';
-import { errorMessage } from '../../api/errors';
+import brutal from '../../components/brutal.module.css';
+import { QueryErrorAlert } from '../../components/QueryErrorAlert';
 import { formatBusinessDate, formatMonthLabel } from '../../lib/date';
 import { formatCents } from '../../lib/money';
-import { brutal, palette } from '../../theme';
+import { palette } from '../../theme';
 import { useSession } from '../auth/session';
+import { NewRequestButton } from '../requests/NewRequestButton';
 import { dashboardQueryKey, fetchSummary } from './api';
 
 type IndicatorProps = { label: string; value: string; hint: string; highlight?: boolean };
@@ -51,12 +52,7 @@ function Indicator({ label, value, hint, highlight = false }: IndicatorProps) {
 function WelcomeBanner({ name, isRequester }: { name: string; isRequester: boolean }) {
   const firstName = name.split(' ')[0] ?? name;
   return (
-    <Card
-      bg={palette.cream}
-      withBorder={false}
-      p="xl"
-      style={{ border: brutal.border, boxShadow: brutal.shadow, borderRadius: brutal.radius }}
-    >
+    <Card bg={palette.cream} withBorder={false} p="xl" className={brutal.panel}>
       <Group justify="space-between" align="center" wrap="wrap" gap="xl">
         <Stack gap="sm" maw={560}>
           <Title order={2} size="h3">
@@ -68,22 +64,13 @@ function WelcomeBanner({ name, isRequester }: { name: string; isRequester: boole
               : 'Revise o que está pendente e registre os pagamentos aprovados.'}
           </Text>
           <Group gap="sm" mt="xs">
-            {isRequester && (
-              <Button
-                component={Link}
-                to="/requests/new"
-                leftSection={<IconPlus size={18} />}
-                style={{ border: brutal.border, boxShadow: brutal.shadowSmall }}
-              >
-                Nova solicitação
-              </Button>
-            )}
+            <NewRequestButton withIcon className={brutal.control} />
             <Button
               component={Link}
               to="/requests?status=PENDING"
               variant="default"
               leftSection={<IconFileInvoice size={18} />}
-              style={{ border: brutal.border, boxShadow: brutal.shadowSmall }}
+              className={brutal.control}
             >
               Ver pendentes
             </Button>
@@ -91,7 +78,7 @@ function WelcomeBanner({ name, isRequester }: { name: string; isRequester: boole
               component={Link}
               to="/requests?status=APPROVED"
               variant="default"
-              style={{ border: brutal.border, boxShadow: brutal.shadowSmall }}
+              className={brutal.control}
             >
               Ver aprovadas
             </Button>
@@ -122,19 +109,16 @@ export function DashboardPage() {
         </SimpleGrid>
       )}
       {summary.isError && (
-        <Alert color="red" title="Não foi possível carregar o painel">
-          <Stack gap="xs" align="flex-start">
-            {errorMessage(summary.error)}
-            <Button size="xs" variant="light" onClick={() => void summary.refetch()}>
-              Tentar novamente
-            </Button>
-          </Stack>
-        </Alert>
+        <QueryErrorAlert
+          title="Não foi possível carregar o painel"
+          error={summary.error}
+          onRetry={() => void summary.refetch()}
+        />
       )}
       {summary.isSuccess && (
         <>
           {/* Os números se autodescrevem pela reference_date do servidor (§14.2). */}
-          <Text c="dimmed" size="sm">
+          <Text c={palette.textSecondary} size="sm">
             {scope} Data de referência: {formatBusinessDate(summary.data.reference_date)}.
           </Text>
           <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>

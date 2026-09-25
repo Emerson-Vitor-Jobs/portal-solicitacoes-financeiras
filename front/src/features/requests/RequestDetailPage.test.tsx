@@ -4,7 +4,7 @@ import { http } from 'msw';
 import { server } from '../../test/msw';
 import { renderApp } from '../../test/render';
 import { FINANCE_EMAIL, loginAs, problem, REQUESTER_EMAIL, state } from '../../test/fake-api';
-import type { RequestStatus } from './api';
+import type { RequestStatus } from '../../api/types';
 
 // Solicitações da Ana no seed, uma por status (visíveis para ela e para o financeiro).
 const REQUEST_BY_STATUS: Record<RequestStatus, string> = {

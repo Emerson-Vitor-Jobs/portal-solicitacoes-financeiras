@@ -1,126 +1,49 @@
-import {
-  ActionIcon,
-  AppShell,
-  Box,
-  Burger,
-  Button,
-  Center,
-  Group,
-  NavLink,
-  ScrollArea,
-  Stack,
-  Text,
-  Title,
-  Tooltip,
-  UnstyledButton,
-} from '@mantine/core';
-import { useDisclosure, useLocalStorage, useMediaQuery } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
+import { AppShell, Box, Burger, Group, NavLink, ScrollArea, Stack, Text } from '@mantine/core';
+import { useDisclosure, useLocalStorage } from '@mantine/hooks';
 import {
   IconFileInvoice,
   IconLayoutDashboard,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
-  IconLogout,
-  IconPlus,
 } from '@tabler/icons-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { Link, NavLink as RouterNavLink, Outlet, useNavigate } from 'react-router';
-import { errorMessage } from '../api/errors';
-import { logout } from '../features/auth/api';
+import { NavLink as RouterNavLink, Outlet } from 'react-router';
 import { useSession } from '../features/auth/session';
+import { useLogout } from '../features/auth/use-logout';
+import { NewRequestButton } from '../features/requests/NewRequestButton';
 import { ROLE_LABELS } from '../lib/labels';
-import { brutal, palette } from '../theme';
+import { useIsMobile } from '../lib/use-is-mobile';
+import { palette } from '../theme';
+import { AppBrand } from './AppBrand';
 import classes from './AppLayout.module.css';
+import brutal from './brutal.module.css';
+import { BrutalIconButton } from './BrutalIconButton';
+import { LogoutButton } from './LogoutButton';
 import { UserAvatar } from './UserAvatar';
-
-// Marca: um círculo preto com o cifrão, igual ao favicon. Decorativa (o título ao lado já nomeia).
-function BrandMark() {
-  return (
-    <Center
-      aria-hidden
-      w={36}
-      h={36}
-      bg={palette.ink}
-      c={palette.cream}
-      fw={700}
-      style={{ borderRadius: '50%', flexShrink: 0 }}
-    >
-      $
-    </Center>
-  );
-}
 
 type MenuItem = { to: string; label: string; icon: ReactNode; end?: boolean };
 
+const MENU: MenuItem[] = [
+  { to: '/', label: 'Painel', icon: <IconLayoutDashboard size={20} stroke={1.8} />, end: true },
+  { to: '/requests', label: 'Solicitações', icon: <IconFileInvoice size={20} stroke={1.8} /> },
+];
+
 export function AppLayout() {
   const { user } = useSession();
-  // Celular: a lateral é uma gaveta aberta pelo hambúrguer do topo.
-  const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] = useDisclosure(false);
-  // Desktop: lateral aberta ou fechada, lembrada neste navegador. Aberta → o topo some; fechada → o topo volta.
-  const [desktopOpened, setDesktopOpened] = useLocalStorage({
+  const [mobileNavbarOpened, { toggle: toggleMobileNavbar, close: closeMobileNavbar }] =
+    useDisclosure(false);
+  const [desktopNavbarOpened, setDesktopNavbarOpened] = useLocalStorage({
     key: 'gex:sidebar-open',
     defaultValue: false,
   });
-  // Abaixo do breakpoint `sm` (48em) a lateral vira gaveta, e o topo (com o hambúrguer) fica sempre visível.
-  const isMobile = useMediaQuery('(max-width: 48em)');
-  const headerVisible = isMobile === true || !desktopOpened;
-  const navbarVisible = isMobile === true ? mobileOpened : desktopOpened;
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  const logoutMutation = useMutation({
-    mutationFn: logout,
-    onSuccess: async () => {
-      await navigate('/login', { replace: true });
-      queryClient.clear();
-    },
-    onError: (error) => {
-      notifications.show({
-        color: 'red',
-        title: 'Não foi possível sair',
-        message: errorMessage(error),
-      });
-    },
-  });
-
-  const menu: MenuItem[] = [
-    { to: '/', label: 'Painel', icon: <IconLayoutDashboard size={20} stroke={1.8} />, end: true },
-    {
-      to: '/requests',
-      label: 'Solicitações',
-      icon: <IconFileInvoice size={20} stroke={1.8} />,
-    },
-  ];
-
-  const logoutButton = (compact: boolean) =>
-    compact ? (
-      <Tooltip label="Sair">
-        <ActionIcon
-          variant="default"
-          size="lg"
-          radius="md"
-          aria-label="Sair"
-          onClick={() => logoutMutation.mutate()}
-          loading={logoutMutation.isPending}
-          style={{ border: brutal.border, boxShadow: brutal.shadowSmall }}
-        >
-          <IconLogout size={18} />
-        </ActionIcon>
-      </Tooltip>
-    ) : (
-      <Button
-        fullWidth
-        variant="default"
-        leftSection={<IconLogout size={18} />}
-        onClick={() => logoutMutation.mutate()}
-        loading={logoutMutation.isPending}
-        style={{ border: brutal.border, boxShadow: brutal.shadowSmall, borderRadius: 10 }}
-      >
-        Sair
-      </Button>
-    );
+  const isMobile = useIsMobile();
+  const headerVisible = isMobile === true || !desktopNavbarOpened;
+  const navbarVisible = isMobile === true ? mobileNavbarOpened : desktopNavbarOpened;
+  const logoutMutation = useLogout();
+  const logoutProps = {
+    loading: logoutMutation.isPending,
+    onLogout: () => logoutMutation.mutate(),
+  };
 
   return (
     <AppShell
@@ -128,89 +51,66 @@ export function AppLayout() {
       navbar={{
         width: 272,
         breakpoint: 'sm',
-        collapsed: { mobile: !mobileOpened, desktop: !desktopOpened },
+        collapsed: { mobile: !mobileNavbarOpened, desktop: !desktopNavbarOpened },
       }}
       padding="lg"
       styles={{ main: { backgroundColor: palette.background } }}
     >
-      {/* Topo: aparece com a lateral fechada (desktop) e sempre no celular. Recolhido, o conteúdo nem é
-          renderizado: sem itens invisíveis pro leitor de tela nem pro Tab. */}
-      <AppShell.Header bg={palette.cream} style={{ borderBottom: brutal.border }}>
+      <AppShell.Header bg={palette.cream} className={brutal.bottomEdge}>
         {headerVisible && (
           <Group h="100%" px="md" justify="space-between" wrap="nowrap">
             <Group wrap="nowrap" gap="sm">
               <Burger
-                opened={mobileOpened}
-                onClick={toggleMobile}
+                opened={mobileNavbarOpened}
+                onClick={toggleMobileNavbar}
                 hiddenFrom="sm"
                 size="sm"
                 aria-label="Menu"
               />
-              <Tooltip label="Abrir menu">
-                <ActionIcon
-                  visibleFrom="sm"
-                  variant="default"
-                  size="lg"
-                  radius="md"
-                  aria-label="Abrir menu"
-                  onClick={() => setDesktopOpened(true)}
-                  style={{ border: brutal.border, boxShadow: brutal.shadowSmall }}
-                >
-                  <IconLayoutSidebarLeftExpand size={18} />
-                </ActionIcon>
-              </Tooltip>
-              <BrandMark />
-              <Title order={1} size="h4" lh={1.2} style={{ whiteSpace: 'nowrap' }}>
-                Portal Financeiro
-              </Title>
+              <BrutalIconButton
+                label="Abrir menu"
+                visibleFrom="sm"
+                onClick={() => setDesktopNavbarOpened(true)}
+              >
+                <IconLayoutSidebarLeftExpand size={18} />
+              </BrutalIconButton>
+              <AppBrand lineHeight={1.2} />
             </Group>
             <Group wrap="nowrap" gap="sm">
               <UserAvatar id={user.id} name={user.name} size={36} />
               <Text size="sm" fw={500} visibleFrom="sm">
                 {user.name}
               </Text>
-              {logoutButton(true)}
+              <LogoutButton compact {...logoutProps} />
             </Group>
           </Group>
         )}
       </AppShell.Header>
 
-      {/* Lateral neo-brutalista: marca, navegação, ação principal e o usuário com o botão de sair. */}
       <AppShell.Navbar
         p="md"
         aria-label="Menu lateral"
         bg={palette.cream}
-        style={{ borderRight: brutal.border }}
+        className={brutal.endEdge}
       >
         {navbarVisible && (
           <>
             <AppShell.Section>
               <Group justify="space-between" wrap="nowrap" mb="lg">
-                <Group gap="sm" wrap="nowrap">
-                  <BrandMark />
-                  <Title order={1} size="h4" lh={1.1} style={{ whiteSpace: 'nowrap' }}>
-                    Portal Financeiro
-                  </Title>
-                </Group>
-                <Tooltip label="Fechar menu">
-                  <ActionIcon
-                    visibleFrom="sm"
-                    variant="default"
-                    size="lg"
-                    radius="md"
-                    aria-label="Fechar menu"
-                    onClick={() => setDesktopOpened(false)}
-                    style={{ border: brutal.border, boxShadow: brutal.shadowSmall }}
-                  >
-                    <IconLayoutSidebarLeftCollapse size={18} />
-                  </ActionIcon>
-                </Tooltip>
+                <AppBrand lineHeight={1.1} />
+                <BrutalIconButton
+                  label="Fechar menu"
+                  visibleFrom="sm"
+                  onClick={() => setDesktopNavbarOpened(false)}
+                >
+                  <IconLayoutSidebarLeftCollapse size={18} />
+                </BrutalIconButton>
               </Group>
             </AppShell.Section>
 
             <AppShell.Section grow component={ScrollArea}>
               <Stack gap={6}>
-                {menu.map((item) => (
+                {MENU.map((item) => (
                   <NavLink
                     key={item.to}
                     component={RouterNavLink}
@@ -218,52 +118,35 @@ export function AppLayout() {
                     end={item.end}
                     label={item.label}
                     leftSection={item.icon}
-                    onClick={closeMobile}
+                    onClick={closeMobileNavbar}
                     className={classes.navlink}
                   />
                 ))}
               </Stack>
 
-              {/* Criar é do solicitante (POST /requests é do REQUESTER): abre o modal sobre a lista. */}
-              {user.role === 'REQUESTER' && (
-                <Button
-                  component={Link}
-                  to="/requests/new"
-                  onClick={closeMobile}
-                  fullWidth
-                  mt="lg"
-                  leftSection={<IconPlus size={18} />}
-                  style={{ border: brutal.border, boxShadow: brutal.shadow, borderRadius: 10 }}
-                >
-                  Nova solicitação
-                </Button>
-              )}
+              <NewRequestButton
+                withIcon
+                onClick={closeMobileNavbar}
+                fullWidth
+                mt="lg"
+                className={brutal.sidebarPrimaryControl}
+              />
             </AppShell.Section>
 
             <AppShell.Section>
-              <Box
-                p="sm"
-                bg="white"
-                style={{
-                  border: brutal.border,
-                  boxShadow: brutal.shadow,
-                  borderRadius: brutal.radius,
-                }}
-              >
-                <UnstyledButton component="div" w="100%" mb="sm">
-                  <Group gap="sm" wrap="nowrap">
-                    <UserAvatar id={user.id} name={user.name} size={44} />
-                    <Box style={{ minWidth: 0 }}>
-                      <Text fw={600} truncate>
-                        {user.name}
-                      </Text>
-                      <Text size="xs" c={palette.textSecondary}>
-                        {ROLE_LABELS[user.role]}
-                      </Text>
-                    </Box>
-                  </Group>
-                </UnstyledButton>
-                {logoutButton(false)}
+              <Box p="sm" bg="white" className={brutal.panel}>
+                <Group gap="sm" wrap="nowrap" mb="sm">
+                  <UserAvatar id={user.id} name={user.name} size={44} />
+                  <Box miw={0}>
+                    <Text fw={600} truncate>
+                      {user.name}
+                    </Text>
+                    <Text size="xs" c={palette.textSecondary}>
+                      {ROLE_LABELS[user.role]}
+                    </Text>
+                  </Box>
+                </Group>
+                <LogoutButton {...logoutProps} />
               </Box>
             </AppShell.Section>
           </>

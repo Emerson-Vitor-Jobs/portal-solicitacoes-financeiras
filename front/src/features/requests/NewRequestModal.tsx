@@ -1,18 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  Alert,
-  Button,
-  Group,
-  Modal,
-  Select,
-  SimpleGrid,
-  Stack,
-  Textarea,
-  TextInput,
-  Title,
-} from '@mantine/core';
+import { Alert, Modal, Select, SimpleGrid, Stack, Textarea, TextInput, Title } from '@mantine/core';
 import { MonthPickerInput } from '@mantine/dates';
-import { useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -21,25 +9,25 @@ import { useLocation, useNavigate } from 'react-router';
 import { errorMessage, isApiError } from '../../api/errors';
 import { BusinessDateInput } from '../../components/BusinessDateInput';
 import { CnpjInput } from '../../components/CnpjInput';
+import { ModalActions } from '../../components/ModalActions';
 import { MoneyInput } from '../../components/MoneyInput';
-import { CATEGORY_LABELS, enumValues } from '../../lib/labels';
+import { applyFieldErrors } from '../../lib/form-errors';
+import { CATEGORY_LABELS, enumOptions } from '../../lib/labels';
+import { useIsMobile } from '../../lib/use-is-mobile';
 import { useSubmitLock } from '../../lib/use-submit-lock';
 import { useSession } from '../auth/session';
 import { dashboardQueryKey } from '../dashboard/api';
 import { createRequest, requestKeys } from './api';
 import {
   emptyNewRequest,
-  formFieldFor,
+  NEW_REQUEST_FIELD_MAP,
   newRequestSchema,
   toCreateBody,
   type NewRequestInput,
   type NewRequestOutput,
 } from './new-request-schema';
 
-const CATEGORY_OPTIONS = enumValues(CATEGORY_LABELS).map((value) => ({
-  value,
-  label: CATEGORY_LABELS[value],
-}));
+const CATEGORY_OPTIONS = enumOptions(CATEGORY_LABELS);
 
 // Nova solicitação em modal, aberto sobre a lista pela rota /requests/new: o link continua compartilhável, e
 // fechar volta pra onde a pessoa estava (a lista com os filtros dela) ou, se entrou direto pelo link, pra lista.
@@ -47,7 +35,7 @@ export function NewRequestModal() {
   const { reference_date } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useMediaQuery('(max-width: 48em)');
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const lock = useSubmitLock();
   // Erros que não pertencem a um campo do formulário (ex.: 403, 500, campo desconhecido no 422).
@@ -78,13 +66,10 @@ export function NewRequestModal() {
         return;
       }
       if (isApiError(error) && error.code === 'VALIDATION_FAILED') {
-        const unmatched: string[] = [];
-        for (const fieldError of error.fieldErrors) {
-          const field = formFieldFor(fieldError.field);
-          if (field) form.setError(field, { message: fieldError.message });
-          else unmatched.push(fieldError.message);
-        }
-        setFormError(unmatched.length > 0 ? unmatched.join(' ') : null);
+        const unmatched = applyFieldErrors(form.setError, error.fieldErrors, NEW_REQUEST_FIELD_MAP);
+        setFormError(
+          unmatched.length > 0 ? unmatched.map((fieldError) => fieldError.message).join(' ') : null,
+        );
         return;
       }
       setFormError(errorMessage(error));
@@ -251,14 +236,11 @@ export function NewRequestModal() {
             {...form.register('description')}
             error={errors.description?.message}
           />
-          <Group justify="flex-end">
-            <Button variant="default" onClick={close}>
-              Cancelar
-            </Button>
-            <Button type="submit" loading={mutation.isPending} disabled={mutation.isPending}>
-              Enviar solicitação
-            </Button>
-          </Group>
+          <ModalActions
+            confirmLabel="Enviar solicitação"
+            loading={mutation.isPending}
+            onCancel={close}
+          />
         </Stack>
       </form>
     </Modal>

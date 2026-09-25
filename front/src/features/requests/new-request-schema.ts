@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { isCnpjComplete, normalizeCnpj } from '../../lib/cnpj';
 import { competenceFromMonthValue, isBusinessDate } from '../../lib/date';
+import type { ApiFieldMap } from '../../lib/form-errors';
 import { CATEGORY_LABELS, enumValues } from '../../lib/labels';
 import { parseBRLToCents } from '../../lib/money';
 import type { CreateRequestBody } from './api';
@@ -72,7 +73,6 @@ export const newRequestSchema = z.object({
 
 export type NewRequestInput = z.input<typeof newRequestSchema>;
 export type NewRequestOutput = z.output<typeof newRequestSchema>;
-export type NewRequestField = keyof NewRequestInput;
 
 export const emptyNewRequest: NewRequestInput = {
   supplier_name: '',
@@ -90,8 +90,13 @@ export function toCreateBody(values: NewRequestOutput): CreateRequestBody {
   return { ...rest, amount_cents: amount };
 }
 
-// Campo do contrato (errors[].field do 422) → campo do formulário.
-export function formFieldFor(apiField: string): NewRequestField | null {
-  if (apiField === 'amount_cents') return 'amount';
-  return apiField in emptyNewRequest ? (apiField as NewRequestField) : null;
-}
+export const NEW_REQUEST_FIELD_MAP: ApiFieldMap<NewRequestInput> = {
+  supplier_name: 'supplier_name',
+  supplier_cnpj: 'supplier_cnpj',
+  invoice_number: 'invoice_number',
+  amount_cents: 'amount',
+  competence: 'competence',
+  due_date: 'due_date',
+  category: 'category',
+  description: 'description',
+};
