@@ -15,7 +15,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { errorMessage, hasCode } from '../../api/errors';
+import type { RequestStatus } from '../../api/types';
 import { OverdueBadge } from '../../components/OverdueBadge';
+import { QueryErrorAlert } from '../../components/QueryErrorAlert';
 import { StatusBadge } from '../../components/StatusBadge';
 import { formatCnpj } from '../../lib/cnpj';
 import { formatBusinessDate, formatCompetence, formatInstant } from '../../lib/date';
@@ -42,7 +44,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function RequestData({ request }: { request: RequestDetail }) {
   return (
-    <Card withBorder radius="md" padding="lg">
+    <Card>
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} component="dl" m={0}>
         <Field label="Fornecedor">{request.supplier_name}</Field>
         <Field label="CNPJ">{formatCnpj(request.supplier_cnpj)}</Field>
@@ -75,10 +77,13 @@ function RequestData({ request }: { request: RequestDetail }) {
   );
 }
 
-// Histórico só de leitura (a auditoria não é editável pela interface).
+function historyReasonLabel(newStatus: RequestStatus): string {
+  return newStatus === 'PAID' ? 'Referência' : 'Motivo';
+}
+
 function History({ request }: { request: RequestDetail }) {
   if (request.history.length === 0) {
-    return <Text c="dimmed">Sem eventos registrados.</Text>;
+    return <Text c={palette.textSecondary}>Sem eventos registrados.</Text>;
   }
   return (
     <Timeline active={request.history.length - 1} bulletSize={14} lineWidth={2}>
@@ -91,13 +96,12 @@ function History({ request }: { request: RequestDetail }) {
               : `${STATUS_LABELS[event.previous_status]} → ${STATUS_LABELS[event.new_status]}`
           }
         >
-          <Text size="sm" c="dimmed">
+          <Text size="sm" c={palette.textSecondary}>
             {event.actor.name} · {formatInstant(event.created_at)}
           </Text>
           {event.reason !== null && (
-            // No pagamento, o `reason` do evento é a referência do pagamento (como nos eventos do seed).
             <Text size="sm">
-              {event.new_status === 'PAID' ? 'Referência' : 'Motivo'}: {event.reason}
+              {historyReasonLabel(event.new_status)}: {event.reason}
             </Text>
           )}
         </Timeline.Item>
@@ -106,14 +110,13 @@ function History({ request }: { request: RequestDetail }) {
   );
 }
 
-// Ação principal em preto (a cor de ação do sistema visual, §17); rejeitar é destrutiva, em vermelho com contorno.
 const ACTION_BUTTONS: Record<
   RequestAction,
-  { label: string; color: string; variant: 'filled' | 'outline' }
+  { label: string; variant: 'filled' | 'outline'; color?: string }
 > = {
-  approve: { label: 'Aprovar', color: 'ink', variant: 'filled' },
-  reject: { label: 'Rejeitar', color: '#B42318', variant: 'outline' },
-  markPaid: { label: 'Marcar como pago', color: 'ink', variant: 'filled' },
+  approve: { label: 'Aprovar', variant: 'filled' },
+  reject: { label: 'Rejeitar', variant: 'outline', color: palette.danger },
+  markPaid: { label: 'Marcar como pago', variant: 'filled' },
 };
 
 export function RequestDetailPage() {
@@ -124,34 +127,26 @@ export function RequestDetailPage() {
 
   if (detail.isPending) {
     return (
-      <Stack aria-label="Carregando solicitação">
+      <Stack role="status" aria-label="Carregando solicitação">
         <Skeleton h={32} w={320} />
         <Skeleton h={220} />
       </Stack>
     );
   }
 
-  // Tela de erro só sem dados: um refetch que falha (foco da janela, recarga depois de um 409) não
-  // troca a página nem desmonta um modal aberto com o que já foi digitado.
   if (detail.data === undefined) {
     const notFound = hasCode(detail.error, 'NOT_FOUND');
     return (
-      <Alert
+      <QueryErrorAlert
         color={notFound ? 'gray' : 'red'}
         title={notFound ? 'Solicitação não encontrada' : 'Não foi possível carregar a solicitação'}
+        error={notFound ? undefined : detail.error}
+        onRetry={notFound ? undefined : () => void detail.refetch()}
       >
-        <Stack gap="xs" align="flex-start">
-          {!notFound && errorMessage(detail.error)}
-          {!notFound && (
-            <Button size="xs" variant="light" onClick={() => void detail.refetch()}>
-              Tentar novamente
-            </Button>
-          )}
-          <Anchor component={Link} to="/requests">
-            Voltar para a lista
-          </Anchor>
-        </Stack>
-      </Alert>
+        <Anchor component={Link} to="/requests">
+          Voltar para a lista
+        </Anchor>
+      </QueryErrorAlert>
     );
   }
 
@@ -193,7 +188,6 @@ export function RequestDetailPage() {
         </Alert>
       )}
 
-      {/* O valor em destaque, como o total do recibo no sistema visual (§17). */}
       <Card bg={palette.cream} withBorder={false}>
         <Group justify="space-between" align="flex-end" wrap="wrap">
           <div>

@@ -1,19 +1,24 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
+const LOCAL_API_URL = 'http://localhost:3001';
+const SLOW_UI_TEST_TIMEOUT_MS = 20_000;
+
 export default defineConfig({
   plugins: [react()],
   server: {
-    // Em dev, o /api vai pra API local; no Docker quem faz isso é o nginx.
-    proxy: { '/api': 'http://localhost:3001' },
+    proxy: { '/api': LOCAL_API_URL },
   },
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./test/setup.ts'],
-    // Testes de tela com user-event digitando vários campos passam de 5 s em máquina carregada.
-    testTimeout: 20_000,
-    include: ['src/**/*.test.{ts,tsx}', 'test/**/*.test.{ts,tsx}'],
-    coverage: { provider: 'v8', include: ['src/**'], exclude: ['src/api/schema.d.ts'] },
+    setupFiles: ['./src/test/setup.ts'],
+    testTimeout: SLOW_UI_TEST_TIMEOUT_MS,
+    include: ['src/**/*.test.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      exclude: ['src/api/schema.d.ts', 'src/test/**'],
+    },
   },
 });

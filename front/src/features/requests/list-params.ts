@@ -1,11 +1,10 @@
 import { isBusinessDate } from '../../lib/date';
 import { isEnumValue, STATUS_LABELS } from '../../lib/labels';
-import type { ListQuery, RequestStatus } from './api';
+import type { RequestStatus } from '../../api/types';
+import type { ListQuery } from './api';
 
-export const PAGE_SIZE = 20;
+const PAGE_SIZE = 20;
 
-// Filtros e paginação vivem na URL (sobrevivem a F5 e ao voltar). O que vier inválido na URL é
-// ignorado aqui, em vez de ir para a API e voltar como 422.
 export type ListFilters = {
   status: RequestStatus | null;
   supplier: string;
@@ -42,7 +41,6 @@ export function toListQuery(filters: ListFilters): ListQuery {
   };
 }
 
-// Muda um filtro e volta para a página 1.
 export function withFilter(
   params: URLSearchParams,
   name: FilterName,

@@ -17,11 +17,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { useLocation, useNavigate } from 'react-router';
 import { z } from 'zod';
-import { errorMessage, hasCode, isApiError, tooManyRequestsMessage } from '../../api/errors';
+import { errorMessage, isApiError } from '../../api/errors';
 import illustration from '../../assets/doodles/sitting-reading.svg';
+import { applyFieldErrors, type ApiFieldMap } from '../../lib/form-errors';
 import { palette } from '../../theme';
 import { login, sessionQueryKey } from './api';
-import type { LoginLocationState } from './SessionExpiryListener';
+import { readLoginState } from './login-state';
 
 const loginSchema = z.object({
   email: z.string().trim().min(1, 'Informe o e-mail.').pipe(z.email('E-mail inválido.')),
@@ -29,20 +30,13 @@ const loginSchema = z.object({
 });
 type LoginForm = z.infer<typeof loginSchema>;
 
-// Mensagem do erro do login. Credencial inválida não diz qual dos dois campos errou (§5.2).
-function loginErrorMessage(error: unknown): string {
-  if (hasCode(error, 'INVALID_CREDENTIALS')) return 'E-mail ou senha inválidos.';
-  if (isApiError(error) && error.code === 'TOO_MANY_REQUESTS') {
-    return tooManyRequestsMessage(error.retryAfterSeconds);
-  }
-  return errorMessage(error);
-}
+const LOGIN_FIELD_MAP: ApiFieldMap<LoginForm> = { email: 'email', password: 'password' };
 
 export function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const state = (location.state ?? {}) as LoginLocationState;
+  const loginState = readLoginState(location.state);
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -52,17 +46,12 @@ export function LoginPage() {
   const mutation = useMutation({
     mutationFn: login,
     onSuccess: async () => {
-      // A sessão completa (com reference_date) vem do /auth/me, que o RequireAuth busca de novo.
       queryClient.removeQueries({ queryKey: sessionQueryKey });
-      await navigate(state.from ?? '/', { replace: true });
+      await navigate(loginState.from ?? '/', { replace: true });
     },
     onError: (error) => {
       if (isApiError(error) && error.code === 'VALIDATION_FAILED') {
-        for (const fieldError of error.fieldErrors) {
-          if (fieldError.field === 'email' || fieldError.field === 'password') {
-            form.setError(fieldError.field, { message: fieldError.message });
-          }
-        }
+        applyFieldErrors(form.setError, error.fieldErrors, LOGIN_FIELD_MAP);
       }
     },
   });
@@ -71,8 +60,6 @@ export function LoginPage() {
   const { errors } = form.formState;
 
   return (
-    // Fundo creme da marca, com a ilustração ao lado do formulário (some só no celular), como a tela de
-    // entrada do sistema visual (§17).
     <Center mih="100vh" p="md" bg={palette.cream}>
       <SimpleGrid
         cols={{ base: 1, sm: 2 }}
@@ -100,12 +87,12 @@ export function LoginPage() {
                     Use o e-mail e a senha do seu perfil.
                   </Text>
                 </Stack>
-                {state.expired && !mutation.isError && (
+                {loginState.expired && !mutation.isError && (
                   <Alert color="yellow">Sua sessão expirou. Entre novamente.</Alert>
                 )}
                 {mutation.isError && (
                   <Alert color="red" role="alert">
-                    {loginErrorMessage(mutation.error)}
+                    {errorMessage(mutation.error)}
                   </Alert>
                 )}
                 <TextInput
@@ -122,13 +109,7 @@ export function LoginPage() {
                   {...form.register('password')}
                   error={errors.password?.message}
                 />
-                <Button
-                  type="submit"
-                  size="md"
-                  fullWidth
-                  loading={mutation.isPending}
-                  disabled={mutation.isPending}
-                >
+                <Button type="submit" size="md" fullWidth loading={mutation.isPending}>
                   Entrar
                 </Button>
               </Stack>

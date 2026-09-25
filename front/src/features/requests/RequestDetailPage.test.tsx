@@ -1,12 +1,11 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
-import { server } from '../../../test/msw';
-import { renderApp } from '../../../test/render';
+import { server } from '../../test/msw';
+import { renderApp } from '../../test/render';
 import { FINANCE_EMAIL, loginAs, problem, REQUESTER_EMAIL, state } from '../../test/fake-api';
-import type { RequestStatus } from './api';
+import type { RequestStatus } from '../../api/types';
 
-// Solicitações da Ana no seed, uma por status (visíveis para ela e para o financeiro).
 const REQUEST_BY_STATUS: Record<RequestStatus, string> = {
   PENDING: '20000000-0000-4000-8000-000000000001',
   APPROVED: '20000000-0000-4000-8000-000000000007',
@@ -17,10 +16,12 @@ const REQUEST_BY_STATUS: Record<RequestStatus, string> = {
 const ALL_ACTIONS = ['Aprovar', 'Rejeitar', 'Marcar como pago'];
 
 function postsTo(suffix: string) {
-  return state.requestLog.filter((r) => r.method === 'POST' && r.url.pathname.endsWith(suffix));
+  return state.requestLog.filter(
+    (call) => call.method === 'POST' && call.url.pathname.endsWith(suffix),
+  );
 }
 
-describe('#10 RequestDetailPage: ações por papel e status', () => {
+describe('#10 RequestDetailPage: actions by role and status', () => {
   const matrix: [string, RequestStatus, string[]][] = [
     [FINANCE_EMAIL, 'PENDING', ['Aprovar', 'Rejeitar']],
     [FINANCE_EMAIL, 'APPROVED', ['Marcar como pago']],
@@ -32,7 +33,7 @@ describe('#10 RequestDetailPage: ações por papel e status', () => {
     [REQUESTER_EMAIL, 'PAID', []],
   ];
 
-  test.each(matrix)('#10 %s + %s mostra só %j', async (email, status, expected) => {
+  test.each(matrix)('#10 %s + %s shows only %j', async (email, status, expected) => {
     loginAs(email);
     renderApp(`/requests/${REQUEST_BY_STATUS[status]}`);
     await screen.findByRole('heading', { name: 'Histórico' });
@@ -50,7 +51,7 @@ describe('RequestDetailPage', () => {
     vi.useRealTimers();
   });
 
-  test('mostra todos os dados e o histórico em ordem', async () => {
+  test('shows all the data and the history in order', async () => {
     loginAs(FINANCE_EMAIL);
     renderApp(`/requests/${REQUEST_BY_STATUS.PAID}`);
 
@@ -64,15 +65,14 @@ describe('RequestDetailPage', () => {
     expect(screen.getByText('Aprovada → Paga')).toBeInTheDocument();
   });
 
-  test('solicitação inexistente ou de outra pessoa (404) mostra "não encontrada"', async () => {
+  test('a missing or someone else\'s request (404) shows "não encontrada"', async () => {
     loginAs(REQUESTER_EMAIL);
-    // A 000002 é do Bruno: para a Ana, o back responde 404.
     renderApp('/requests/20000000-0000-4000-8000-000000000002');
 
     expect(await screen.findByText('Solicitação não encontrada')).toBeInTheDocument();
   });
 
-  test('refetch do detalhe que falha não desmonta o modal aberto nem perde o texto', async () => {
+  test('a failing detail refetch neither unmounts the open modal nor loses the text', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     const { queryClient } = renderApp(`/requests/${REQUEST_BY_STATUS.PENDING}`);
@@ -89,7 +89,7 @@ describe('RequestDetailPage', () => {
     expect(dialog.getByLabelText(/Motivo da rejeição/)).toHaveValue('Motivo em edição');
   });
 
-  test('rejeitar exige motivo e envia o motivo; o histórico mostra a transição', async () => {
+  test('rejecting requires a reason and sends it; the history shows the transition', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     renderApp(`/requests/${REQUEST_BY_STATUS.PENDING}`);
@@ -104,21 +104,21 @@ describe('RequestDetailPage', () => {
     await user.click(dialog.getByRole('button', { name: 'Confirmar rejeição' }));
 
     expect(await screen.findByText('Pendente → Rejeitada')).toBeInTheDocument();
-    expect(postsTo('/decision').map((r) => r.body)).toEqual([
+    expect(postsTo('/decision').map((call) => call.body)).toEqual([
       { decision: 'REJECT', reason: 'Nota sem assinatura' },
     ]);
     expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument();
     expect(screen.getByText('Motivo: Nota sem assinatura')).toBeInTheDocument();
   });
 
-  test('no histórico, o pagamento mostra a referência (não "motivo")', async () => {
+  test('in the history, the payment shows the reference (not "motivo")', async () => {
     loginAs(FINANCE_EMAIL);
     renderApp(`/requests/${REQUEST_BY_STATUS.PAID}`);
     expect(await screen.findByText(/^Referência: PAG-/)).toBeInTheDocument();
     expect(screen.queryByText(/^Motivo: PAG-/)).not.toBeInTheDocument();
   });
 
-  test('aprovar: dois cliques rápidos = 1 POST', async () => {
+  test('approve: two quick clicks = 1 POST', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     renderApp(`/requests/${REQUEST_BY_STATUS.PENDING}`);
@@ -132,15 +132,14 @@ describe('RequestDetailPage', () => {
     expect(screen.getByRole('button', { name: 'Marcar como pago' })).toBeInTheDocument();
   });
 
-  test('409 INVALID_TRANSITION avisa e recarrega o detalhe', async () => {
+  test('409 INVALID_TRANSITION warns and reloads the detail', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     renderApp(`/requests/${REQUEST_BY_STATUS.PENDING}`);
     await user.click(await screen.findByRole('button', { name: 'Aprovar' }));
 
-    // Outra pessoa rejeitou antes: o estado no "servidor" já mudou.
-    const request = state.requests.find((r) => r.id === REQUEST_BY_STATUS.PENDING);
-    if (!request) throw new Error('fixture ausente');
+    const request = state.requests.find((stored) => stored.id === REQUEST_BY_STATUS.PENDING);
+    if (!request) throw new Error('missing fixture');
     request.status = 'REJECTED';
     request.rejection_reason = 'Rejeitada por outra pessoa';
 
@@ -153,8 +152,7 @@ describe('RequestDetailPage', () => {
     expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument();
   });
 
-  test('marcar como pago: pré-preenche com o agora real em SP e envia RFC 3339 com offset', async () => {
-    // Só o Date é falso (o relógio real é 25/09/2026 15:30 em SP; a reference_date é 18/09).
+  test('mark as paid: prefills with the real São Paulo now and sends RFC 3339 with offset', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-25T18:30:00Z'));
     const user = userEvent.setup();
@@ -172,12 +170,12 @@ describe('RequestDetailPage', () => {
     await user.click(dialog.getByRole('button', { name: 'Confirmar pagamento' }));
 
     expect(await screen.findByText('Aprovada → Paga')).toBeInTheDocument();
-    expect(postsTo('/mark-paid').map((r) => r.body)).toEqual([
+    expect(postsTo('/mark-paid').map((call) => call.body)).toEqual([
       { paid_at: '2026-09-25T15:30:00-03:00', payment_reference: 'PAG-2026-0099' },
     ]);
   });
 
-  test('a data do pagamento não passa do hoje real em SP (o campo recusa amanhã)', async () => {
+  test('the payment date cannot go past the real São Paulo today (the field rejects tomorrow)', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-25T18:30:00Z'));
     const user = userEvent.setup();
@@ -195,12 +193,12 @@ describe('RequestDetailPage', () => {
     await user.type(dialog.getByLabelText(/Referência do pagamento/), 'PAG-1');
     await user.click(dialog.getByRole('button', { name: 'Confirmar pagamento' }));
     expect(await screen.findByText('Aprovada → Paga')).toBeInTheDocument();
-    expect(postsTo('/mark-paid').map((r) => r.body)).toEqual([
+    expect(postsTo('/mark-paid').map((call) => call.body)).toEqual([
       { paid_at: '2026-09-25T15:30:00-03:00', payment_reference: 'PAG-1' },
     ]);
   });
 
-  test('422 do pagamento (ex.: antes da aprovação) aparece no campo da data', async () => {
+  test('a payment 422 (e.g. before approval) shows on the date field', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     server.use(
@@ -224,7 +222,7 @@ describe('RequestDetailPage', () => {
     );
   });
 
-  test('422 em campo que o modal não tem aparece no alerta do modal', async () => {
+  test('a 422 on a field the modal lacks shows in the modal alert', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     server.use(
@@ -243,7 +241,7 @@ describe('RequestDetailPage', () => {
     expect(await dialog.findByRole('alert')).toHaveTextContent('Decisão inválida.');
   });
 
-  test('422 no campo do modal aparece no campo, sem repetir no alerta', async () => {
+  test('a 422 on a modal field shows on the field, not repeated in the alert', async () => {
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     server.use(

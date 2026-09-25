@@ -7,10 +7,6 @@ type Props = Omit<TextInputProps, 'value' | 'onChange' | 'onPaste'> & {
   onChange: (text: string) => void;
 };
 
-// Campo de valor em reais (§14.1). Duas entradas, um parser só:
-// - teclado → máscara estilo banco (cada dígito entra pela direita: 1 → 0,01);
-// - colar → parseBRLToCents no texto colado ("10" = R$ 10,00, "R$ 2.000,00" = R$ 2.000,00).
-// O valor do campo é o texto formatado; quem usa converte com parseBRLToCents na hora de enviar.
 export function MoneyInput({ value, onChange, error, ...props }: Props) {
   const [pasteError, setPasteError] = useState<string | null>(null);
 

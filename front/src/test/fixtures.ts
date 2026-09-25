@@ -1,7 +1,3 @@
-// Fixtures dos testes, geradas a partir de ../data (seed_users, seed_requests, seed_audit_events e
-// expected_results). Ficam copiadas aqui porque o container front-test só enxerga a pasta front/.
-// O `is_overdue` abaixo é dado de fixture (o que a API devolveria com APP_TODAY=2026-09-18); o front
-// nunca calcula vencimento (§14.2).
 import type { components } from '../api/schema';
 
 type Schemas = components['schemas'];
@@ -774,7 +770,6 @@ export const REQUESTS = [
   },
 ] satisfies Schemas['RequestDetail'][];
 
-// Indicadores oficiais do expected_results.json, por usuário.
 export const DASHBOARDS: Record<string, Omit<Schemas['DashboardSummary'], 'reference_date'>> = {
   '10000000-0000-4000-8000-000000000003': {
     pending_amount_cents: 875049,
@@ -796,7 +791,6 @@ export const DASHBOARDS: Record<string, Omit<Schemas['DashboardSummary'], 'refer
   },
 };
 
-// Cópia literal de expected_results.json → money_parse_examples (oráculo oficial do teste #1).
 export const MONEY_PARSE_EXAMPLES: Record<string, number> = {
   '1.553,13': 155313,
   '0,01': 1,

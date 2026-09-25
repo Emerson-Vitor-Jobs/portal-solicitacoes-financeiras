@@ -1,9 +1,8 @@
 import { delay, http, HttpResponse, type JsonBodyType } from 'msw';
+import { CSRF_HEADER, CSRF_HEADER_VALUE } from '../api/client';
 import type { components } from '../api/schema';
 import { DASHBOARDS, REFERENCE_DATE, REQUESTS, SEED_PASSWORDS, USERS } from './fixtures';
 
-// Fake da API em MSW: responde no formato do contrato (tipos gerados), com o estado em memória.
-// Não reimplementa as regras do back: é só o suficiente pros testes de componente e de fluxo.
 type Schemas = components['schemas'];
 type Problem = Schemas['Problem'];
 type RequestDetail = Schemas['RequestDetail'];
@@ -46,7 +45,7 @@ function json<T extends JsonBodyType>(body: T, status = 200) {
 type FakeState = {
   currentUser: User | null;
   requests: RequestDetail[];
-  requestLog: { method: string; url: URL; body: unknown; headers: Headers }[];
+  requestLog: { method: string; url: URL; body: unknown }[];
 };
 
 export const state: FakeState = { currentUser: null, requests: [], requestLog: [] };
@@ -58,8 +57,8 @@ export function resetFakeApi(): void {
 }
 
 export function loginAs(email: string): User {
-  const user = USERS.find((u) => u.email === email);
-  if (!user) throw new Error(`usuário de fixture inexistente: ${email}`);
+  const user = USERS.find((seedUser) => seedUser.email === email);
+  if (!user) throw new Error(`unknown fixture user: ${email}`);
   state.currentUser = user;
   return user;
 }
@@ -76,19 +75,22 @@ function visibleTo(user: User, request: RequestDetail): boolean {
 }
 
 function withoutAccents(text: string): string {
-  return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
-function toListItem(r: RequestDetail): Schemas['RequestListItem'] {
+function toListItem(stored: RequestDetail): Schemas['RequestListItem'] {
   return {
-    id: r.id,
-    supplier_name: r.supplier_name,
-    invoice_number: r.invoice_number,
-    amount_cents: r.amount_cents,
-    due_date: r.due_date,
-    status: r.status,
-    is_overdue: r.is_overdue,
-    requester: r.requester,
+    id: stored.id,
+    supplier_name: stored.supplier_name,
+    invoice_number: stored.invoice_number,
+    amount_cents: stored.amount_cents,
+    due_date: stored.due_date,
+    status: stored.status,
+    is_overdue: stored.is_overdue,
+    requester: stored.requester,
   };
 }
 
@@ -99,14 +101,34 @@ async function log(request: Request): Promise<void> {
     method: request.method,
     url: new URL(request.url),
     body,
-    headers: request.headers,
   });
 }
 
-// Todo POST sem o header anti-CSRF recebe 403, como no back (§8.3).
 function missingCsrf(request: Request): boolean {
-  return request.headers.get('X-Requested-With') !== 'gex-web';
+  return request.headers.get(CSRF_HEADER) !== CSRF_HEADER_VALUE;
 }
+
+const EVENT_INSTANT = '2026-09-18T11:00:00-03:00';
+
+function transition(
+  request: RequestDetail,
+  actor: User,
+  next: Schemas['RequestStatus'],
+  reason: string | null,
+): void {
+  request.history.push({
+    id: `30000000-0000-4000-9000-${String(request.history.length + 100).padStart(12, '0')}`,
+    previous_status: request.status,
+    new_status: next,
+    actor: { id: actor.id, name: actor.name },
+    reason,
+    created_at: EVENT_INSTANT,
+  });
+  request.status = next;
+  request.updated_at = EVENT_INSTANT;
+}
+
+const CREATE_RESPONSE_DELAY_MS = 20;
 
 export const handlers = [
   http.all('*/api/*', async ({ request }) => {
@@ -119,7 +141,7 @@ export const handlers = [
 
   http.post('*/api/auth/login', async ({ request }) => {
     const body = (await request.json()) as { email: string; password: string };
-    const user = USERS.find((u) => u.email === body.email);
+    const user = USERS.find((seedUser) => seedUser.email === body.email);
     if (!user || SEED_PASSWORDS[user.email] !== body.password) {
       return problem(401, 'INVALID_CREDENTIALS', 'E-mail ou senha inválidos.');
     }
@@ -142,7 +164,7 @@ export const handlers = [
     const user = state.currentUser;
     if (!user) return unauthenticated();
     const numbers = DASHBOARDS[user.id];
-    if (!numbers) throw new Error(`sem dashboard de fixture para ${user.id}`);
+    if (!numbers) throw new Error(`no fixture dashboard for ${user.id}`);
     return json<Schemas['DashboardSummary']>({ ...numbers, reference_date: REFERENCE_DATE });
   }),
 
@@ -158,13 +180,13 @@ export const handlers = [
     const pageSize = Number(params.get('page_size') ?? '20');
 
     const filtered = state.requests
-      .filter((r) => visibleTo(user, r))
-      .filter((r) => (status ? r.status === status : true))
-      .filter((r) =>
-        supplier ? withoutAccents(r.supplier_name).includes(withoutAccents(supplier)) : true,
+      .filter((stored) => visibleTo(user, stored))
+      .filter((stored) => (status ? stored.status === status : true))
+      .filter((stored) =>
+        supplier ? withoutAccents(stored.supplier_name).includes(withoutAccents(supplier)) : true,
       )
-      .filter((r) => (dueFrom ? r.due_date >= dueFrom : true))
-      .filter((r) => (dueTo ? r.due_date <= dueTo : true))
+      .filter((stored) => (dueFrom ? stored.due_date >= dueFrom : true))
+      .filter((stored) => (dueTo ? stored.due_date <= dueTo : true))
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
     const total = filtered.length;
@@ -181,7 +203,9 @@ export const handlers = [
   http.get('*/api/requests/:id', ({ params }) => {
     const user = state.currentUser;
     if (!user) return unauthenticated();
-    const found = state.requests.find((r) => r.id === params.id && visibleTo(user, r));
+    const found = state.requests.find(
+      (stored) => stored.id === params.id && visibleTo(user, stored),
+    );
     if (!found) return problem(404, 'NOT_FOUND', 'Solicitação não encontrada.');
     return json<RequestDetail>(found);
   }),
@@ -195,7 +219,9 @@ export const handlers = [
       'id' | 'requester' | 'status' | 'history'
     >;
     const duplicate = state.requests.some(
-      (r) => r.supplier_cnpj === body.supplier_cnpj && r.invoice_number === body.invoice_number,
+      (stored) =>
+        stored.supplier_cnpj === body.supplier_cnpj &&
+        stored.invoice_number === body.invoice_number,
     );
     if (duplicate) {
       return problem(409, 'DUPLICATE_INVOICE', 'Já existe uma solicitação com este CNPJ e nota.');
@@ -232,7 +258,7 @@ export const handlers = [
       ],
     };
     state.requests.push(created);
-    await delay(20);
+    await delay(CREATE_RESPONSE_DELAY_MS);
     return HttpResponse.json(created, { status: 201, headers: { Location: `/requests/${id}` } });
   }),
 
@@ -240,7 +266,7 @@ export const handlers = [
     const user = state.currentUser;
     if (!user) return unauthenticated();
     if (user.role !== 'FINANCE') return problem(403, 'FORBIDDEN', 'Só o financeiro decide.');
-    const found = state.requests.find((r) => r.id === params.id);
+    const found = state.requests.find((stored) => stored.id === params.id);
     if (!found) return problem(404, 'NOT_FOUND', 'Solicitação não encontrada.');
     const body = (await request.json()) as { decision: 'APPROVE' | 'REJECT'; reason?: string };
     if (body.decision === 'REJECT' && !body.reason?.trim()) {
@@ -264,7 +290,7 @@ export const handlers = [
     const user = state.currentUser;
     if (!user) return unauthenticated();
     if (user.role !== 'FINANCE') return problem(403, 'FORBIDDEN', 'Só o financeiro paga.');
-    const found = state.requests.find((r) => r.id === params.id);
+    const found = state.requests.find((stored) => stored.id === params.id);
     if (!found) return problem(404, 'NOT_FOUND', 'Solicitação não encontrada.');
     const body = (await request.json()) as { paid_at: string; payment_reference: string };
     if (found.status !== 'APPROVED') {
@@ -277,23 +303,3 @@ export const handlers = [
     return json<RequestDetail>(found);
   }),
 ];
-
-const EVENT_INSTANT = '2026-09-18T11:00:00-03:00';
-
-function transition(
-  request: RequestDetail,
-  actor: User,
-  next: Schemas['RequestStatus'],
-  reason: string | null,
-): void {
-  request.history.push({
-    id: `30000000-0000-4000-9000-${String(request.history.length + 100).padStart(12, '0')}`,
-    previous_status: request.status,
-    new_status: next,
-    actor: { id: actor.id, name: actor.name },
-    reason,
-    created_at: EVENT_INSTANT,
-  });
-  request.status = next;
-  request.updated_at = EVENT_INSTANT;
-}

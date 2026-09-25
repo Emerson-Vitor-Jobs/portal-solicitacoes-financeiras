@@ -1,18 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  Alert,
-  Button,
-  Group,
-  Modal,
-  Select,
-  SimpleGrid,
-  Stack,
-  Textarea,
-  TextInput,
-  Title,
-} from '@mantine/core';
+import { Alert, Modal, Select, SimpleGrid, Stack, Textarea, TextInput, Title } from '@mantine/core';
 import { MonthPickerInput } from '@mantine/dates';
-import { useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -21,37 +9,34 @@ import { useLocation, useNavigate } from 'react-router';
 import { errorMessage, isApiError } from '../../api/errors';
 import { BusinessDateInput } from '../../components/BusinessDateInput';
 import { CnpjInput } from '../../components/CnpjInput';
+import { ModalActions } from '../../components/ModalActions';
 import { MoneyInput } from '../../components/MoneyInput';
-import { CATEGORY_LABELS, enumValues } from '../../lib/labels';
+import { applyFieldErrors } from '../../lib/form-errors';
+import { CATEGORY_LABELS, enumOptions } from '../../lib/labels';
+import { useIsMobile } from '../../lib/use-is-mobile';
 import { useSubmitLock } from '../../lib/use-submit-lock';
 import { useSession } from '../auth/session';
 import { dashboardQueryKey } from '../dashboard/api';
 import { createRequest, requestKeys } from './api';
 import {
   emptyNewRequest,
-  formFieldFor,
+  NEW_REQUEST_FIELD_MAP,
   newRequestSchema,
   toCreateBody,
   type NewRequestInput,
   type NewRequestOutput,
 } from './new-request-schema';
 
-const CATEGORY_OPTIONS = enumValues(CATEGORY_LABELS).map((value) => ({
-  value,
-  label: CATEGORY_LABELS[value],
-}));
+const CATEGORY_OPTIONS = enumOptions(CATEGORY_LABELS);
 
-// Nova solicitação em modal, aberto sobre a lista pela rota /requests/new: o link continua compartilhável, e
-// fechar volta pra onde a pessoa estava (a lista com os filtros dela) ou, se entrou direto pelo link, pra lista.
 export function NewRequestModal() {
   const { reference_date } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useMediaQuery('(max-width: 48em)');
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const lock = useSubmitLock();
-  // Erros que não pertencem a um campo do formulário (ex.: 403, 500, campo desconhecido no 422).
-  const [formError, setFormError] = useState<string | null>(null);
+  const [nonFieldError, setNonFieldError] = useState<string | null>(null);
 
   const form = useForm<NewRequestInput, unknown, NewRequestOutput>({
     resolver: zodResolver(newRequestSchema),
@@ -70,41 +55,33 @@ export function NewRequestModal() {
     },
     onError: (error) => {
       if (isApiError(error) && error.code === 'DUPLICATE_INVOICE') {
-        form.setError(
-          'invoice_number',
-          { message: 'Já existe uma solicitação com este CNPJ e número de nota fiscal.' },
-          { shouldFocus: true },
-        );
+        form.setError('invoice_number', { message: errorMessage(error) }, { shouldFocus: true });
         return;
       }
       if (isApiError(error) && error.code === 'VALIDATION_FAILED') {
-        const unmatched: string[] = [];
-        for (const fieldError of error.fieldErrors) {
-          const field = formFieldFor(fieldError.field);
-          if (field) form.setError(field, { message: fieldError.message });
-          else unmatched.push(fieldError.message);
-        }
-        setFormError(unmatched.length > 0 ? unmatched.join(' ') : null);
+        const unmatched = applyFieldErrors(form.setError, error.fieldErrors, NEW_REQUEST_FIELD_MAP);
+        setNonFieldError(
+          unmatched.length > 0 ? unmatched.map((fieldError) => fieldError.message).join(' ') : null,
+        );
         return;
       }
-      setFormError(errorMessage(error));
+      setNonFieldError(errorMessage(error));
     },
     onSettled: () => lock.release(),
   });
 
   const submit = form.handleSubmit(
     (values) => {
-      setFormError(null);
+      setNonFieldError(null);
       mutation.mutate(toCreateBody(values));
     },
     () => lock.release(),
   );
 
   const close = () => {
-    // Não fecha no meio do envio: o resultado ainda vai decidir pra onde ir.
     if (mutation.isPending) return;
-    // location.key === 'default': entrou direto pelo link, sem página anterior no app pra voltar.
-    if (location.key === 'default') void navigate('/requests');
+    const openedFromDirectLink = location.key === 'default';
+    if (openedFromDirectLink) void navigate('/requests');
     else void navigate(-1);
   };
 
@@ -126,18 +103,17 @@ export function NewRequestModal() {
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          // Anti-duplo-envio: o segundo clique é ignorado enquanto o primeiro não termina.
           if (!lock.tryAcquire()) return;
           submit(event).catch((error: unknown) => {
             lock.release();
-            setFormError(errorMessage(error));
+            setNonFieldError(errorMessage(error));
           });
         }}
       >
         <Stack>
-          {formError && (
+          {nonFieldError && (
             <Alert color="red" role="alert" title="Não foi possível criar a solicitação">
-              {formError}
+              {nonFieldError}
             </Alert>
           )}
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
@@ -251,14 +227,11 @@ export function NewRequestModal() {
             {...form.register('description')}
             error={errors.description?.message}
           />
-          <Group justify="flex-end">
-            <Button variant="default" onClick={close}>
-              Cancelar
-            </Button>
-            <Button type="submit" loading={mutation.isPending} disabled={mutation.isPending}>
-              Enviar solicitação
-            </Button>
-          </Group>
+          <ModalActions
+            confirmLabel="Enviar solicitação"
+            loading={mutation.isPending}
+            onCancel={close}
+          />
         </Stack>
       </form>
     </Modal>

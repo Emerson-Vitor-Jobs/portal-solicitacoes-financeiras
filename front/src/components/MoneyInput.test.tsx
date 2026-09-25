@@ -1,11 +1,10 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { render } from '../../test/render';
+import { render } from '../test/render';
 import { parseBRLToCents } from '../lib/money';
 import { MoneyInput } from './MoneyInput';
 
-// Mostra os centavos que o formulário enviaria, para o teste conferir o valor e não só o texto.
 function Harness() {
   const [text, setText] = useState('');
   return (
@@ -17,7 +16,7 @@ function Harness() {
 }
 
 describe('#10 MoneyInput', () => {
-  test('#10 digitar 155313 mostra 1.553,13 (cada dígito entra pela direita)', async () => {
+  test('#10 typing 155313 shows 1.553,13 (each digit enters from the right)', async () => {
     const user = userEvent.setup();
     render(<Harness />);
     const input = screen.getByLabelText('Valor');
@@ -30,7 +29,7 @@ describe('#10 MoneyInput', () => {
     expect(screen.getByTestId('cents')).toHaveTextContent('155313');
   });
 
-  test('#10 letras e separadores digitados são ignorados; apagar tira o último dígito', async () => {
+  test('#10 typed letters and separators are ignored; backspace removes the last digit', async () => {
     const user = userEvent.setup();
     render(<Harness />);
     const input = screen.getByLabelText('Valor');
@@ -42,7 +41,7 @@ describe('#10 MoneyInput', () => {
     expect(input).toHaveValue('1,23');
   });
 
-  test('#10 colar "R$ 2.000,00" vale 200000 centavos', async () => {
+  test('#10 pasting "R$ 2.000,00" is worth 200000 cents', async () => {
     const user = userEvent.setup();
     render(<Harness />);
     const input = screen.getByLabelText('Valor');
@@ -54,7 +53,7 @@ describe('#10 MoneyInput', () => {
     expect(screen.getByTestId('cents')).toHaveTextContent('200000');
   });
 
-  test('#10 colar "10" vale R$ 10,00 (parser, não a máscara)', async () => {
+  test('#10 pasting "10" is worth R$ 10,00 (parser, not the mask)', async () => {
     const user = userEvent.setup();
     render(<Harness />);
     const input = screen.getByLabelText('Valor');
@@ -66,7 +65,7 @@ describe('#10 MoneyInput', () => {
     expect(screen.getByTestId('cents')).toHaveTextContent('1000');
   });
 
-  test('#10 colar formato americano é recusado com mensagem, sem mudar o valor', async () => {
+  test('#10 pasting the US format is rejected with a message, without changing the value', async () => {
     const user = userEvent.setup();
     render(<Harness />);
     const input = screen.getByLabelText('Valor');

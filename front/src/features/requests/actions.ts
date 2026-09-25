@@ -1,10 +1,11 @@
-import type { Role } from '../auth/api';
-import type { RequestStatus } from './api';
+import type { RequestStatus, Role } from '../../api/types';
 
 export type RequestAction = 'approve' | 'reject' | 'markPaid';
 
-// Ações que a tela oferece por papel e status. É só UX: quem garante é o back (403/409). Segue as
-// transições do enunciado: PENDING → APPROVED | REJECTED, APPROVED → PAID; estados finais sem ação.
+export function canCreateRequest(role: Role): boolean {
+  return role === 'REQUESTER';
+}
+
 export function availableActions(role: Role, status: RequestStatus): RequestAction[] {
   if (role === 'REQUESTER') return [];
   switch (status) {

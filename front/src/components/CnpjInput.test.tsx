@@ -1,10 +1,10 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { render } from '../../test/render';
+import { render } from '../test/render';
 import { CnpjInput } from './CnpjInput';
 
 describe('CnpjInput', () => {
-  test('aceita letras, converte para maiúscula e aplica a máscara', async () => {
+  test('accepts letters, uppercases them and applies the mask', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(<CnpjInput label="CNPJ" onChange={onChange} />);
@@ -16,7 +16,7 @@ describe('CnpjInput', () => {
     expect(onChange).toHaveBeenLastCalledWith('12ABC34501DE35');
   });
 
-  test('os dois dígitos verificadores só aceitam números', async () => {
+  test('the two check digits accept only numbers', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(<CnpjInput label="CNPJ" onChange={onChange} />);
@@ -26,7 +26,7 @@ describe('CnpjInput', () => {
     expect(onChange).toHaveBeenLastCalledWith('12ABC34501DE35');
   });
 
-  test('colar com ou sem máscara dá o mesmo valor', async () => {
+  test('pasting with or without the mask gives the same value', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(<CnpjInput label="CNPJ" onChange={onChange} />);

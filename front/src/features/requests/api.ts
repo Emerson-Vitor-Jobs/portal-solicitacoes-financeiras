@@ -3,8 +3,6 @@ import type { components, paths } from '../../api/schema';
 
 export type RequestDetail = components['schemas']['RequestDetail'];
 export type RequestListItem = components['schemas']['RequestListItem'];
-export type RequestStatus = components['schemas']['RequestStatus'];
-export type Category = components['schemas']['Category'];
 export type ListQuery = NonNullable<paths['/api/requests']['get']['parameters']['query']>;
 export type CreateRequestBody =
   paths['/api/requests']['post']['requestBody']['content']['application/json'];
@@ -13,7 +11,6 @@ export type DecisionBody =
 export type MarkPaidBody =
   paths['/api/requests/{id}/mark-paid']['post']['requestBody']['content']['application/json'];
 
-// Chaves do cache: invalidar ['requests'] derruba lista e detalhes de uma vez.
 export const requestKeys = {
   all: ['requests'] as const,
   lists: ['requests', 'list'] as const,

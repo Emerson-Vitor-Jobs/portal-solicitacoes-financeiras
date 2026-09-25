@@ -1,18 +1,18 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { http } from 'msw';
-import { server } from '../../../test/msw';
-import { renderApp } from '../../../test/render';
-import { loginAs, problem, REQUESTER_EMAIL, state } from '../../test/fake-api';
+import { server } from '../../test/msw';
+import { renderApp } from '../../test/render';
+import { FINANCE_EMAIL, loginAs, problem, REQUESTER_EMAIL, state } from '../../test/fake-api';
 
-// Os campos são procurados DENTRO do modal: a lista aberta atrás dele também tem campos "Fornecedor" e
-// "Vencimento" (os filtros).
 function modal() {
   return within(screen.getByRole('dialog', { name: 'Nova solicitação' }));
 }
 
 function postsToRequests() {
-  return state.requestLog.filter((r) => r.method === 'POST' && r.url.pathname === '/api/requests');
+  return state.requestLog.filter(
+    (call) => call.method === 'POST' && call.url.pathname === '/api/requests',
+  );
 }
 
 async function fillValidForm(user: UserEvent, invoice = 'NF-2026-9001') {
@@ -32,7 +32,7 @@ async function fillValidForm(user: UserEvent, invoice = 'NF-2026-9001') {
 }
 
 describe('#10 NewRequestModal', () => {
-  test('#10 envia o corpo do contrato: centavos, CNPJ sem máscara, datas em string', async () => {
+  test('#10 sends the contract body: cents, unmasked CNPJ, string dates', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
     const { router } = renderApp('/requests/new');
@@ -41,7 +41,7 @@ describe('#10 NewRequestModal', () => {
     await user.click(screen.getByRole('button', { name: 'Enviar solicitação' }));
 
     await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/requests\/2000/));
-    expect(postsToRequests().map((r) => r.body)).toEqual([
+    expect(postsToRequests().map((call) => call.body)).toEqual([
       {
         supplier_name: 'Aurora Serviços Digitais',
         supplier_cnpj: '12ABC34501DE35',
@@ -56,10 +56,9 @@ describe('#10 NewRequestModal', () => {
     expect(await screen.findByText('Solicitação criada.')).toBeInTheDocument();
   });
 
-  test('#10 anti-duplo-envio: dois cliques rápidos = 1 POST, botão travado enquanto envia', async () => {
+  test('#10 double-submit guard: two quick clicks = 1 POST, button locked while sending', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
-    // Segura a resposta do POST até o teste liberar, para ver o botão durante o envio.
     let release = () => {};
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -67,7 +66,7 @@ describe('#10 NewRequestModal', () => {
     server.use(
       http.post('*/api/requests', async () => {
         await gate;
-        return undefined; // segue para o handler padrão do fake
+        return undefined;
       }),
     );
     renderApp('/requests/new');
@@ -84,12 +83,11 @@ describe('#10 NewRequestModal', () => {
     expect(postsToRequests()).toHaveLength(1);
   });
 
-  test('#10 um 409 DUPLICATE_INVOICE mostra a mensagem no campo da nota', async () => {
+  test('#10 a 409 DUPLICATE_INVOICE shows the message on the invoice field', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
     renderApp('/requests/new');
 
-    // CNPJ + nota do seed (Aurora, NF-2026-1001) já existem no fake.
     await fillValidForm(user, 'NF-2026-1001');
     await user.clear(modal().getByLabelText(/CNPJ do fornecedor/));
     await user.type(modal().getByLabelText(/CNPJ do fornecedor/), '10000000000145');
@@ -103,11 +101,10 @@ describe('#10 NewRequestModal', () => {
     expect(invoice).toHaveAccessibleDescription(
       /Já existe uma solicitação com este CNPJ e número de nota fiscal\./,
     );
-    // O botão volta a funcionar para corrigir e reenviar.
     expect(screen.getByRole('button', { name: 'Enviar solicitação' })).toBeEnabled();
   });
 
-  test('422 com errors[] aponta cada erro no campo certo (amount_cents → Valor)', async () => {
+  test('422 with errors[] points each error to the right field (amount_cents → Valor)', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
     server.use(
@@ -131,7 +128,7 @@ describe('#10 NewRequestModal', () => {
     );
   });
 
-  test('valida a forma antes de enviar (nada vai para a API)', async () => {
+  test('validates the shape before sending (nothing reaches the API)', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
     renderApp('/requests/new');
@@ -149,8 +146,8 @@ describe('#10 NewRequestModal', () => {
     expect(postsToRequests()).toHaveLength(0);
   });
 
-  test('FINANCE não vê o formulário', async () => {
-    loginAs('financeiro@gex.test');
+  test('FINANCE does not see the form', async () => {
+    loginAs(FINANCE_EMAIL);
     renderApp('/requests/new');
 
     expect(await screen.findByText('Acesso restrito')).toBeInTheDocument();

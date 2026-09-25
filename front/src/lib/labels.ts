@@ -1,21 +1,14 @@
-import type { components } from '../api/schema';
+import type { Category, RequestStatus, Role } from '../api/types';
 import { palette } from '../theme';
 
-type Status = components['schemas']['RequestStatus'];
-type Category = components['schemas']['Category'];
-type Role = components['schemas']['Role'];
-
-// `Record<Enum, …>` obriga uma entrada por valor do enum gerado: se o back mudar a lista, o front
-// deixa de compilar aqui. O front não mantém uma lista própria dos valores (§7.1).
-export const STATUS_LABELS: Record<Status, string> = {
+export const STATUS_LABELS: Record<RequestStatus, string> = {
   PENDING: 'Pendente',
   APPROVED: 'Aprovada',
   REJECTED: 'Rejeitada',
   PAID: 'Paga',
 };
 
-// Acentos pastel do sistema visual; o texto escuro por cima vem do autoContrast do tema (§17).
-export const STATUS_COLORS: Record<Status, string> = {
+export const STATUS_COLORS: Record<RequestStatus, string> = {
   PENDING: palette.yellow,
   APPROVED: palette.blue,
   REJECTED: palette.pink,
@@ -34,9 +27,14 @@ export const ROLE_LABELS: Record<Role, string> = {
   FINANCE: 'Financeiro',
 };
 
-// As chaves do Record viram a lista de valores (a ordem é a da declaração acima).
 export function enumValues<K extends string>(labels: Record<K, string>): K[] {
   return Object.keys(labels) as K[];
+}
+
+export function enumOptions<K extends string>(
+  labels: Record<K, string>,
+): { value: K; label: string }[] {
+  return enumValues(labels).map((value) => ({ value, label: labels[value] }));
 }
 
 export function isEnumValue<K extends string>(

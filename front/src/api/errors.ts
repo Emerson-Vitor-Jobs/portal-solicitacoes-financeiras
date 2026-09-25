@@ -4,15 +4,13 @@ export type Problem = components['schemas']['Problem'];
 export type ProblemCode = Problem['code'];
 export type FieldError = NonNullable<Problem['errors']>[number];
 
-// Erro de uma chamada à API. Carrega o Problem Details (RFC 9457) quando o corpo veio no formato do
-// contrato; a UI decide pelo `code`, nunca pelo texto do `detail` (DECISOES_FUNDACAO §4a).
 export class ApiError extends Error {
   readonly status: number;
   readonly problem: Problem | null;
   readonly retryAfterSeconds: number | null;
 
   constructor(status: number, problem: Problem | null, retryAfterSeconds: number | null = null) {
-    super(problem?.detail ?? `Falha na requisição (HTTP ${status})`);
+    super(problem?.detail ?? `Request failed (HTTP ${status})`);
     this.name = 'ApiError';
     this.status = status;
     this.problem = problem;
@@ -36,8 +34,6 @@ export function hasCode(error: unknown, code: ProblemCode): boolean {
   return isApiError(error) && error.code === code;
 }
 
-// O corpo de erro só é tratado como Problem se tiver a forma mínima do contrato. Um 502 do nginx em
-// HTML, por exemplo, vira ApiError sem `problem` (e cai na mensagem genérica).
 export function isProblem(body: unknown): body is Problem {
   if (typeof body !== 'object' || body === null) return false;
   const candidate = body as Record<string, unknown>;
@@ -48,20 +44,18 @@ export function isProblem(body: unknown): body is Problem {
   );
 }
 
-// `Retry-After` em segundos (RFC 9110 §10.2.3). A forma com data HTTP não é usada pela API.
 export function parseRetryAfter(header: string | null): number | null {
   if (header === null || !/^\d+$/.test(header.trim())) return null;
   return Number(header.trim());
 }
 
-// Mensagem genérica em PT-BR por código. Telas com tratamento próprio (login, formulário) sobrescrevem.
 export function errorMessage(error: unknown): string {
   if (!isApiError(error)) {
     return 'Não foi possível falar com o servidor. Verifique a conexão e tente novamente.';
   }
   const code = error.code;
   if (code === null) {
-    return `Erro inesperado do servidor (HTTP ${error.status}). Tente novamente.`;
+    return unexpectedServerMessage(error.status);
   }
   switch (code) {
     case 'VALIDATION_FAILED':
@@ -83,12 +77,14 @@ export function errorMessage(error: unknown): string {
     case 'INTERNAL':
       return 'Erro interno do servidor. Tente novamente em instantes.';
   }
-  // O tipo garante os códigos do contrato, mas um servidor mais novo pode mandar um código que este
-  // build não conhece: a mensagem nunca fica vazia.
-  return `Erro inesperado do servidor (HTTP ${error.status}). Tente novamente.`;
+  return unexpectedServerMessage(error.status);
 }
 
-export function tooManyRequestsMessage(retryAfterSeconds: number | null): string {
+function unexpectedServerMessage(status: number): string {
+  return `Erro inesperado do servidor (HTTP ${status}). Tente novamente.`;
+}
+
+function tooManyRequestsMessage(retryAfterSeconds: number | null): string {
   if (retryAfterSeconds === null) {
     return 'Muitas tentativas de login. Tente novamente em instantes.';
   }

@@ -1,40 +1,27 @@
-// Sistema visual do portal (DECISOES_FUNDACAO §17): paleta e tipografia do EasyPay (Nickelfox, Figma Community,
-// CC BY 4.0) adaptadas a um portal web. Toda a identidade visual mora aqui; os componentes só usam o tema.
-import { createTheme, type MantineColorsTuple } from '@mantine/core';
+import { createTheme, type CSSVariablesResolver, type MantineColorsTuple } from '@mantine/core';
 
-// Cores do arquivo do Figma (variáveis Gray/*, Neutral/*, Brand/*, Secondary/*).
 export const palette = {
-  ink: '#0B0A0A', // Gray/Black: a cor de ação (botões, item ativo do menu)
-  cream: '#F9EFE5', // Brand/Primary Light: áreas de destaque
-  background: '#F8F8F8', // Gray/Background: fundo das páginas
-  border: '#E0E0E0', // Neutral/Gray 2
-  textSecondary: '#595F67', // Gray/Gray 1: texto de apoio com contraste AA sobre branco
-  // Acentos pastel, usados nos status (texto escuro por cima via autoContrast).
+  ink: '#0B0A0A',
+  cream: '#F9EFE5',
+  background: '#F8F8F8',
+  textSecondary: '#595F67',
+  danger: '#B42318',
   yellow: '#FFF2CF',
   blue: '#BCE2FE',
   green: '#D6FFDC',
   pink: '#FCB3C5',
+  lavender: '#D6E1FF',
 } as const;
 
-// Neo-brutalismo "soft" da barra lateral (§17): borda preta grossa, sombra dura deslocada e cantos arredondados.
-export const brutal = {
-  border: `2px solid ${palette.ink}`,
-  shadow: `4px 4px 0 ${palette.ink}`,
-  shadowSmall: `2px 2px 0 ${palette.ink}`,
-  radius: 12,
-} as const;
-
-// Cores pastel dos avatares (mesmos acentos dos status), escolhidas de forma estável pelo id do usuário.
 export const avatarColors = [
   palette.yellow,
   palette.blue,
   palette.green,
   palette.pink,
-  '#D6E1FF',
+  palette.lavender,
 ] as const;
 
-// Escala do preto ao cinza-claro, montada a partir dos cinzas do Figma (do mais claro [0] ao mais escuro [9]).
-const ink: MantineColorsTuple = [
+const inkScale: MantineColorsTuple = [
   '#F2F2F2',
   '#E0E0E0',
   '#D0D3D8',
@@ -47,7 +34,7 @@ const ink: MantineColorsTuple = [
   '#0B0A0A',
 ];
 
-const cream: MantineColorsTuple = [
+const creamScale: MantineColorsTuple = [
   '#FDF9F5',
   '#F9EFE5',
   '#F2E2D1',
@@ -60,11 +47,24 @@ const cream: MantineColorsTuple = [
   '#553D26',
 ];
 
+export const cssVariablesResolver: CSSVariablesResolver = () => ({
+  variables: {
+    '--app-color-ink': palette.ink,
+    '--app-color-highlight': palette.yellow,
+    '--app-brutal-border': `2px solid ${palette.ink}`,
+    '--app-brutal-shadow': `4px 4px 0 ${palette.ink}`,
+    '--app-brutal-shadow-small': `2px 2px 0 ${palette.ink}`,
+    '--app-brutal-radius': '12px',
+    '--app-brutal-radius-small': '10px',
+  },
+  light: {},
+  dark: {},
+});
+
 export const theme = createTheme({
   primaryColor: 'ink',
   primaryShade: 9,
-  colors: { ink, cream },
-  // Texto escuro sobre fundos claros (badges pastel) e claro sobre escuros, calculado pelo Mantine.
+  colors: { ink: inkScale, cream: creamScale },
   autoContrast: true,
   luminanceThreshold: 0.45,
   black: palette.ink,
