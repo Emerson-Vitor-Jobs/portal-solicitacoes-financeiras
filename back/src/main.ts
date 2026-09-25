@@ -7,7 +7,7 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const pool = createPool(config.databaseUrl);
 
-  const app = buildServer({
+  const app = await buildServer({
     trustProxy: config.trustProxy,
     health: { ping: () => ping(pool) },
   });
