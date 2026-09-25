@@ -13,6 +13,9 @@ esac
 echo ">>> aplicando migrations"
 dbmate --url "$DBMATE_URL" --wait --no-dump-schema --migrations-dir ./migrations up
 
+echo ">>> carregando o seed (idempotente)"
+node dist/seed.js
+
 echo ">>> iniciando a API"
 # exec: o Node vira o PID 1 e recebe o SIGTERM do `docker compose down`.
 exec node dist/main.js
