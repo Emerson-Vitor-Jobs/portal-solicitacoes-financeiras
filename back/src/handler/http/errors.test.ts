@@ -1,11 +1,16 @@
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { CSRF, buildTestServer } from '../../../test/support/server.js';
+import { CSRF, buildTestServer, loginAs } from '../../../test/support/server.js';
+import { ANA, FERNANDA } from '../../../test/support/users.js';
 
 // Contrato de erro (RFC 9457) exercido pelas rotas ainda não implementadas (DECISOES_FUNDACAO §4a, §5).
 let app: FastifyInstance;
+let requester: string;
+let finance: string;
 beforeAll(async () => {
   ({ app } = await buildTestServer());
+  requester = await loginAs(app, ANA);
+  finance = await loginAs(app, FERNANDA);
 });
 afterAll(() => app.close());
 
@@ -40,7 +45,7 @@ describe('handler central de erro', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/requests',
-      headers: json,
+      headers: { ...json, cookie: requester },
       payload: {
         supplier_name: '',
         amount_cents: 12.5,
@@ -68,7 +73,7 @@ describe('handler central de erro', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/requests/20000000-0000-4000-8000-000000000001/decision',
-      headers: json,
+      headers: { ...json, cookie: finance },
       payload: { decision: 'REJECT' },
     });
     expectProblem(res, 422, 'VALIDATION_FAILED');
@@ -76,7 +81,11 @@ describe('handler central de erro', () => {
   });
 
   test('page_size acima de 100 → 422', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/requests?page_size=101' });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/requests?page_size=101',
+      headers: { cookie: requester },
+    });
     expectProblem(res, 422, 'VALIDATION_FAILED');
   });
 

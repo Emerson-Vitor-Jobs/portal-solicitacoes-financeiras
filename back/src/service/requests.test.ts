@@ -1,0 +1,272 @@
+import { beforeEach, describe, expect, test } from 'vitest';
+import { FakeRequestRepository } from '../../test/support/fake_requests.js';
+import { ANA, BRUNO, FERNANDA } from '../../test/support/users.js';
+import { STATUSES, type Status } from '../types/common.js';
+import {
+  DuplicateInvoiceError,
+  ForbiddenError,
+  InvalidTransitionError,
+  NotFoundError,
+  ValidationError,
+} from './errors.js';
+import { RequestService, type CreateRequestInput } from './requests.js';
+
+const ID = '20000000-0000-4000-8000-0000000000aa';
+const APPROVED_AT = new Date('2026-09-10T11:00:00-03:00');
+
+let repo: FakeRequestRepository;
+let service: RequestService;
+let ids: number;
+let clock: Date;
+
+beforeEach(() => {
+  repo = new FakeRequestRepository();
+  ids = 0;
+  clock = new Date('2026-09-18T15:00:00-03:00');
+  service = new RequestService(repo, {
+    today: () => '2026-09-18',
+    now: () => clock,
+    newId: () => `30000000-0000-4000-8000-${String(++ids).padStart(12, '0')}`,
+  });
+});
+
+const input = (overrides: Partial<CreateRequestInput> = {}): CreateRequestInput => ({
+  supplierName: 'Aurora Serviços Digitais',
+  supplierCnpj: '10.000.000/0001-45',
+  invoiceNumber: ' nf-2026-9001 ',
+  amountCents: 155313,
+  competence: '2026-09',
+  dueDate: '2026-09-30',
+  category: 'SERVIÇOS',
+  description: '',
+  ...overrides,
+});
+
+function seedIn(status: Status) {
+  return repo.seed(
+    {
+      id: ID,
+      status,
+      ...(status === 'REJECTED' ? { rejectionReason: 'motivo' } : {}),
+      ...(status === 'PAID'
+        ? { paidAt: new Date('2026-09-12T10:00:00-03:00'), paymentReference: 'PAG-1' }
+        : {}),
+    },
+    status === 'APPROVED' || status === 'PAID' ? APPROVED_AT : undefined,
+  );
+}
+
+describe('criar', () => {
+  test('normaliza CNPJ e nota, grava PENDING e o evento null → PENDING', async () => {
+    const created = await service.create(ANA, input());
+    expect(created).toMatchObject({
+      supplierCnpj: '10000000000145',
+      invoiceNumber: 'NF-2026-9001',
+      status: 'PENDING',
+      description: null,
+      requester: { id: ANA.id },
+      isOverdue: false,
+    });
+    expect(created.history).toMatchObject([
+      { previousStatus: null, newStatus: 'PENDING', actor: { id: ANA.id } },
+    ]);
+  });
+
+  test('#11 CNPJ com DV errado → 422 no campo supplier_cnpj, nada gravado', async () => {
+    const err = await service
+      .create(ANA, input({ supplierCnpj: '10000000000146' }))
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ValidationError);
+    expect((err as ValidationError).errors).toEqual([
+      { field: 'supplier_cnpj', message: 'CNPJ inválido.' },
+    ]);
+    expect(repo.requests.size).toBe(0);
+  });
+
+  test('#2 duplicada (mesmo CNPJ e nota, em outra forma) → DuplicateInvoiceError, sem registro extra', async () => {
+    await service.create(ANA, input());
+    await expect(
+      service.create(
+        BRUNO,
+        input({ supplierCnpj: '10000000000145', invoiceNumber: 'NF-2026-9001' }),
+      ),
+    ).rejects.toThrow(DuplicateInvoiceError);
+    expect(repo.requests.size).toBe(1);
+    expect(repo.events).toHaveLength(1);
+  });
+
+  test('FINANCE não cria solicitação', async () => {
+    await expect(service.create(FERNANDA, input())).rejects.toThrow(ForbiddenError);
+  });
+});
+
+describe('#5 transições pelo service: cada status × cada ação', () => {
+  const actions = {
+    APPROVED: (id: string) => service.approve(FERNANDA, id),
+    REJECTED: (id: string) => service.reject(FERNANDA, id, 'fora do orçamento'),
+    PAID: (id: string) =>
+      service.markPaid(FERNANDA, id, {
+        paidAt: new Date('2026-09-15T10:00:00-03:00'),
+        paymentReference: 'PAG-9',
+      }),
+  } as const;
+  const allowed: Record<Status, Status[]> = {
+    PENDING: ['APPROVED', 'REJECTED'],
+    APPROVED: ['PAID'],
+    REJECTED: [],
+    PAID: [],
+  };
+
+  for (const from of STATUSES) {
+    for (const to of ['APPROVED', 'REJECTED', 'PAID'] as const) {
+      const ok = allowed[from].includes(to);
+      test(`${from} → ${to}: ${ok ? 'permitida' : '409 INVALID_TRANSITION'}`, async () => {
+        seedIn(from);
+        const before = repo.events.length;
+        if (ok) {
+          const updated = await actions[to](ID);
+          expect(updated.status).toBe(to);
+          expect(updated.history.at(-1)).toMatchObject({
+            previousStatus: from,
+            newStatus: to,
+            actor: { id: FERNANDA.id },
+          });
+          expect(repo.events).toHaveLength(before + 1);
+        } else {
+          const err = await actions[to](ID).catch((e: unknown) => e);
+          expect(err).toBeInstanceOf(InvalidTransitionError);
+          // O detail traz o status atual (§5.5).
+          expect((err as Error).message).toBe(
+            `A solicitação está ${from}; não pode ir para ${to}.`,
+          );
+          expect(repo.requests.get(ID)?.status).toBe(from);
+          expect(repo.events).toHaveLength(before);
+        }
+      });
+    }
+  }
+});
+
+describe('regras das transições', () => {
+  test('#7 rejeitar com motivo em branco → 422 no campo reason', async () => {
+    seedIn('PENDING');
+    const err = await service.reject(FERNANDA, ID, '   ').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ValidationError);
+    expect((err as ValidationError).errors).toMatchObject([{ field: 'reason' }]);
+    expect(repo.requests.get(ID)?.status).toBe('PENDING');
+  });
+
+  test('rejeição grava o motivo na solicitação e no evento', async () => {
+    seedIn('PENDING');
+    const updated = await service.reject(FERNANDA, ID, '  fora do orçamento ');
+    expect(updated.rejectionReason).toBe('fora do orçamento');
+    expect(updated.history.at(-1)?.reason).toBe('fora do orçamento');
+  });
+
+  test('#4 REQUESTER não aprova, não rejeita, não paga', async () => {
+    seedIn('PENDING');
+    await expect(service.approve(ANA, ID)).rejects.toThrow(ForbiddenError);
+    await expect(service.reject(ANA, ID, 'x')).rejects.toThrow(ForbiddenError);
+    await expect(
+      service.markPaid(ANA, ID, { paidAt: APPROVED_AT, paymentReference: 'x' }),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  test('perdedor da corrida: o status mudou entre a leitura e o UPDATE → 409 com o status novo', async () => {
+    seedIn('PENDING');
+    repo.beforeUpdate = (requests) => {
+      const r = requests.get(ID);
+      if (r) requests.set(ID, { ...r, status: 'REJECTED', rejectionReason: 'outra pessoa' });
+      repo.beforeUpdate = null;
+    };
+    await expect(service.approve(FERNANDA, ID)).rejects.toThrow(
+      'A solicitação está REJECTED; não pode ir para APPROVED.',
+    );
+  });
+
+  test('id inexistente ou que não é UUID → 404', async () => {
+    await expect(service.approve(FERNANDA, ID)).rejects.toThrow(NotFoundError);
+    await expect(service.approve(FERNANDA, 'abc')).rejects.toThrow(NotFoundError);
+  });
+});
+
+describe('#14 travas da data de pagamento', () => {
+  const pay = (paidAt: string) =>
+    service.markPaid(FERNANDA, ID, { paidAt: new Date(paidAt), paymentReference: 'PAG-77' });
+
+  test('último instante do dia de referência (SP) é aceito', async () => {
+    seedIn('APPROVED');
+    const paid = await pay('2026-09-18T23:59:59-03:00');
+    expect(paid).toMatchObject({ status: 'PAID', paymentReference: 'PAG-77' });
+    expect(paid.paidAt?.toISOString()).toBe('2026-09-19T02:59:59.000Z');
+    // Auditoria: a referência do pagamento vai no reason (como no seed).
+    expect(paid.history.at(-1)).toMatchObject({ newStatus: 'PAID', reason: 'PAG-77' });
+  });
+
+  test('futuro (início do dia seguinte em SP) → 422 paid_at', async () => {
+    seedIn('APPROVED');
+    const err = await pay('2026-09-19T00:00:00-03:00').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ValidationError);
+    expect((err as ValidationError).errors).toMatchObject([{ field: 'paid_at' }]);
+    expect(repo.requests.get(ID)?.status).toBe('APPROVED');
+  });
+
+  test('antes da aprovação → 422 paid_at, e o UPDATE é desfeito', async () => {
+    seedIn('APPROVED');
+    const before = repo.events.length;
+    const err = await pay('2026-09-10T10:59:59-03:00').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ValidationError);
+    expect((err as ValidationError).errors).toMatchObject([
+      { field: 'paid_at', message: 'O pagamento não pode ser anterior à aprovação.' },
+    ]);
+    expect(repo.requests.get(ID)).toMatchObject({ status: 'APPROVED', paidAt: null });
+    expect(repo.events).toHaveLength(before);
+  });
+
+  test('APP_TODAY no passado: pagamento no dia real de hoje é aceito, amanhã real não', async () => {
+    // Referência 18/09, relógio real 25/09: a aprovação feita "agora" tem instante real de 25/09.
+    clock = new Date('2026-09-25T15:00:00-03:00');
+    seedIn('APPROVED');
+    await expect(pay('2026-09-26T00:00:00-03:00')).rejects.toThrow(ValidationError);
+    await expect(pay('2026-09-25T15:00:00-03:00')).resolves.toMatchObject({ status: 'PAID' });
+  });
+
+  test('no instante exato da aprovação é aceito', async () => {
+    seedIn('APPROVED');
+    await expect(pay(APPROVED_AT.toISOString())).resolves.toMatchObject({ status: 'PAID' });
+  });
+});
+
+describe('leitura e escopo', () => {
+  test('#13 REQUESTER não vê a solicitação de outra pessoa: 404, igual a inexistente', async () => {
+    seedIn('PENDING');
+    await expect(service.get(BRUNO, ID)).rejects.toThrow(NotFoundError);
+    await expect(service.get(ANA, ID)).resolves.toMatchObject({ id: ID });
+    await expect(service.get(FERNANDA, ID)).resolves.toMatchObject({ id: ID });
+  });
+
+  test('#12 is_overdue contra a data de referência: vence hoje não está vencida', async () => {
+    repo.seed({ id: ID, dueDate: '2026-09-18' });
+    expect((await service.get(ANA, ID)).isOverdue).toBe(false);
+    repo.seed({ id: ID, dueDate: '2026-09-17' });
+    expect((await service.get(ANA, ID)).isOverdue).toBe(true);
+  });
+
+  test('lista: REQUESTER só vê as próprias; total_pages arredonda para cima', async () => {
+    for (let i = 1; i <= 3; i++) {
+      repo.seed({ id: `${ID.slice(0, -2)}0${i}` });
+    }
+    repo.seed({ id: `${ID.slice(0, -2)}09`, requester: { id: BRUNO.id, name: BRUNO.name } });
+    const page = await service.list(ANA, {
+      status: undefined,
+      supplier: undefined,
+      dueFrom: undefined,
+      dueTo: undefined,
+      page: 1,
+      pageSize: 2,
+    });
+    expect(page).toMatchObject({ total: 3, totalPages: 2, page: 1, pageSize: 2 });
+    expect(page.items).toHaveLength(2);
+    expect(page.referenceDate).toBe('2026-09-18');
+  });
+});

@@ -9,14 +9,24 @@ import {
   requestDetailSchema,
   requestListResponseSchema,
 } from '../../../types/requests.js';
-import { NotImplementedError } from '../errors.js';
+import type { AuthService } from '../../../service/auth.js';
+import type { RequestController } from '../controller/requests.js';
+import { sessionUser } from '../request_context.js';
 import { CSRF_NOTE, SESSION, errors } from './contract.js';
+import { authenticate, requireRole } from './hooks.js';
 
-export function requestRoutes(app: FastifyInstance): void {
+export interface RequestRouteDeps {
+  auth: AuthService;
+  controller: RequestController;
+}
+
+export function requestRoutes(app: FastifyInstance, deps: RequestRouteDeps): void {
   const r = app.withTypeProvider<ZodTypeProvider>();
-  const notImplemented = () => {
-    throw new NotImplementedError();
-  };
+  const c = deps.controller;
+  // Sessão primeiro, papel depois: os dois antes de ler o corpo e de buscar o recurso (§5).
+  const session = authenticate(deps.auth);
+  const requester = [session, requireRole('REQUESTER')];
+  const finance = [session, requireRole('FINANCE')];
 
   r.get('/api/requests', {
     schema: {
@@ -33,7 +43,8 @@ export function requestRoutes(app: FastifyInstance): void {
         501: errors[501],
       },
     },
-    handler: notImplemented,
+    onRequest: session,
+    handler: (request) => c.list(sessionUser(request), request.query),
   });
 
   r.post('/api/requests', {
@@ -53,7 +64,8 @@ export function requestRoutes(app: FastifyInstance): void {
         501: errors[501],
       },
     },
-    handler: notImplemented,
+    onRequest: requester,
+    handler: (request, reply) => c.create(sessionUser(request), request.body, reply),
   });
 
   r.get('/api/requests/:id', {
@@ -64,7 +76,8 @@ export function requestRoutes(app: FastifyInstance): void {
       params: idParamsSchema,
       response: { 200: requestDetailSchema, 401: errors[401], 404: errors[404], 501: errors[501] },
     },
-    handler: notImplemented,
+    onRequest: session,
+    handler: (request) => c.get(sessionUser(request), request.params.id),
   });
 
   r.post('/api/requests/:id/decision', {
@@ -86,7 +99,8 @@ export function requestRoutes(app: FastifyInstance): void {
         501: errors[501],
       },
     },
-    handler: notImplemented,
+    onRequest: finance,
+    handler: (request) => c.decide(sessionUser(request), request.params.id, request.body),
   });
 
   r.post('/api/requests/:id/mark-paid', {
@@ -108,6 +122,7 @@ export function requestRoutes(app: FastifyInstance): void {
         501: errors[501],
       },
     },
-    handler: notImplemented,
+    onRequest: finance,
+    handler: (request) => c.markPaid(sessionUser(request), request.params.id, request.body),
   });
 }

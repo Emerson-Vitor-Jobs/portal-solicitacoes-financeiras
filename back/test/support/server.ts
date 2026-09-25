@@ -1,12 +1,15 @@
 // App HTTP montado com fakes (sem banco), para os testes com app.inject().
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { AuthController } from '../../src/handler/http/controller/auth.js';
+import { RequestController } from '../../src/handler/http/controller/requests.js';
 import type { LogStream } from '../../src/handler/http/logging.js';
 import type { HealthDeps } from '../../src/handler/http/router/health.js';
 import type { LoginRateLimit } from '../../src/handler/http/router/hooks.js';
 import { buildServer } from '../../src/handler/http/server.js';
 import { AuthService } from '../../src/service/auth.js';
+import { RequestService } from '../../src/service/requests.js';
 import { FakeAuthRepository, fakeHash, fakeVerifyPassword } from './fake_auth.js';
+import { FakeRequestRepository } from './fake_requests.js';
 
 export const CSRF = { 'x-requested-with': 'gex-web' } as const;
 
@@ -20,15 +23,18 @@ export interface TestServerOptions {
   loginRateLimit?: LoginRateLimit;
   logStream?: LogStream;
   authRepo?: FakeAuthRepository;
+  requestRepo?: FakeRequestRepository;
 }
 
 export interface TestServer {
   app: FastifyInstance;
   authRepo: FakeAuthRepository;
+  requestRepo: FakeRequestRepository;
 }
 
 export async function buildTestServer(options: TestServerOptions = {}): Promise<TestServer> {
   const authRepo = options.authRepo ?? new FakeAuthRepository();
+  const requestRepo = options.requestRepo ?? new FakeRequestRepository();
   const now = options.now ?? (() => new Date());
   const today = options.today ?? (() => '2026-09-18');
   const auth = new AuthService(authRepo, {
@@ -46,9 +52,10 @@ export async function buildTestServer(options: TestServerOptions = {}): Promise<
       controller: new AuthController(auth, { secure: false }),
       loginRateLimit: options.loginRateLimit ?? RELAXED_RATE_LIMIT,
     },
+    requests: new RequestController(new RequestService(requestRepo, { today, now })),
   });
   await app.ready();
-  return { app, authRepo };
+  return { app, authRepo, requestRepo };
 }
 
 // Faz login pela API e devolve o header Cookie pronto para as próximas requisições.
