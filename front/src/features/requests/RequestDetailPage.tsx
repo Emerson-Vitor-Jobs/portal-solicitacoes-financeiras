@@ -114,7 +114,7 @@ const ACTION_BUTTONS: Record<RequestAction, { label: string; color: string }> = 
 
 export function RequestDetailPage() {
   const { id = '' } = useParams();
-  const { user, reference_date } = useSession();
+  const { user } = useSession();
   const [openAction, setOpenAction] = useState<RequestAction | null>(null);
   const detail = useQuery({ queryKey: requestKeys.detail(id), queryFn: () => fetchRequest(id) });
 
@@ -187,9 +187,7 @@ export function RequestDetailPage() {
 
       {openAction === 'approve' && <ApproveModal request={request} onClose={close} />}
       {openAction === 'reject' && <RejectModal request={request} onClose={close} />}
-      {openAction === 'markPaid' && (
-        <MarkPaidModal request={request} onClose={close} referenceDate={reference_date} />
-      )}
+      {openAction === 'markPaid' && <MarkPaidModal request={request} onClose={close} />}
     </Stack>
   );
 }

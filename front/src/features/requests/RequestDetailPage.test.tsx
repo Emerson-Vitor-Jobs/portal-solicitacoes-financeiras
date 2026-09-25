@@ -46,6 +46,10 @@ describe('#10 RequestDetailPage: ações por papel e status', () => {
 });
 
 describe('RequestDetailPage', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   test('mostra todos os dados e o histórico em ordem', async () => {
     loginAs(FINANCE_EMAIL);
     renderApp(`/requests/${REQUEST_BY_STATUS.PAID}`);
@@ -125,15 +129,18 @@ describe('RequestDetailPage', () => {
     expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument();
   });
 
-  test('marcar como pago envia data e hora de SP em RFC 3339 com offset e a referência', async () => {
+  test('marcar como pago: pré-preenche com o agora real em SP e envia RFC 3339 com offset', async () => {
+    // Só o Date é falso (o relógio real é 25/09/2026 15:30 em SP; a reference_date é 18/09).
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-25T18:30:00Z'));
     const user = userEvent.setup();
     loginAs(FINANCE_EMAIL);
     renderApp(`/requests/${REQUEST_BY_STATUS.APPROVED}`);
 
     await user.click(await screen.findByRole('button', { name: 'Marcar como pago' }));
     const dialog = within(await screen.findByRole('dialog', { name: 'Registrar pagamento' }));
-    // Pré-preenchido com agora em SP, limitado à reference_date (18/09/2026) da sessão.
-    expect(dialog.getByLabelText(/Data do pagamento/)).toHaveValue('18/09/2026');
+    expect(dialog.getByLabelText(/Data do pagamento/)).toHaveValue('25/09/2026');
+    expect(dialog.getByLabelText(/Hora/)).toHaveValue('15:30');
     await user.click(dialog.getByRole('button', { name: 'Confirmar pagamento' }));
     expect(await dialog.findByText('Informe a referência do pagamento.')).toBeInTheDocument();
 
@@ -141,11 +148,32 @@ describe('RequestDetailPage', () => {
     await user.click(dialog.getByRole('button', { name: 'Confirmar pagamento' }));
 
     expect(await screen.findByText('Aprovada → Paga')).toBeInTheDocument();
-    const [call] = postsTo('/mark-paid');
-    expect(call?.body).toEqual({
-      paid_at: expect.stringMatching(/^2026-09-18T\d{2}:\d{2}:00-03:00$/) as unknown,
-      payment_reference: 'PAG-2026-0099',
-    });
+    expect(postsTo('/mark-paid').map((r) => r.body)).toEqual([
+      { paid_at: '2026-09-25T15:30:00-03:00', payment_reference: 'PAG-2026-0099' },
+    ]);
+  });
+
+  test('a data do pagamento não passa do hoje real em SP (o campo recusa amanhã)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-25T18:30:00Z'));
+    const user = userEvent.setup();
+    loginAs(FINANCE_EMAIL);
+    renderApp(`/requests/${REQUEST_BY_STATUS.APPROVED}`);
+
+    await user.click(await screen.findByRole('button', { name: 'Marcar como pago' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Registrar pagamento' }));
+    const date = dialog.getByLabelText(/Data do pagamento/);
+    await user.clear(date);
+    await user.type(date, '26/09/2026');
+    await user.tab();
+
+    expect(date).toHaveValue('25/09/2026');
+    await user.type(dialog.getByLabelText(/Referência do pagamento/), 'PAG-1');
+    await user.click(dialog.getByRole('button', { name: 'Confirmar pagamento' }));
+    expect(await screen.findByText('Aprovada → Paga')).toBeInTheDocument();
+    expect(postsTo('/mark-paid').map((r) => r.body)).toEqual([
+      { paid_at: '2026-09-25T15:30:00-03:00', payment_reference: 'PAG-1' },
+    ]);
   });
 
   test('422 do pagamento (ex.: antes da aprovação) aparece no campo da data', async () => {

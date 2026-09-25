@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Alert, Button, Group, Modal, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { TimeInput } from '@mantine/dates';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { errorMessage, isApiError } from '../../api/errors';
@@ -123,17 +124,18 @@ export function RejectModal({ request, onClose }: ModalProps) {
   );
 }
 
-// Data e hora do pagamento, lidas em America/Sao_Paulo (§6.2). A data não passa da reference_date
-// do servidor; as travas de verdade (futuro, antes da aprovação) são do back e voltam como 422.
-function markPaidSchema(referenceDate: string) {
+// Data e hora do pagamento, lidas em America/Sao_Paulo (§6.2). "Futuro" é pelo relógio real, não
+// pela reference_date (§6.3 revisada): o limite da data é o hoje real em SP. É só dica de UX; as
+// travas de verdade (futuro, antes da aprovação) são do back e voltam como 422 em paid_at.
+function markPaidSchema(today: string) {
   return z.object({
     paid_date: z
       .string()
       .nullable()
       .refine((v) => v !== null && isBusinessDate(v), 'Informe a data do pagamento.')
       .refine(
-        (v) => v === null || v <= referenceDate,
-        `A data não pode passar de ${formatBusinessDate(referenceDate)}.`,
+        (v) => v === null || v <= today,
+        `A data não pode passar de hoje (${formatBusinessDate(today)}).`,
       ),
     paid_time: z.string().refine(isTime, 'Informe a hora (hh:mm).'),
     payment_reference: z
@@ -145,21 +147,12 @@ function markPaidSchema(referenceDate: string) {
 }
 type MarkPaidForm = z.infer<ReturnType<typeof markPaidSchema>>;
 
-// Pré-preenche com "agora" em SP; se o relógio passou da reference_date (APP_TODAY), usa a
-// reference_date, que é o máximo aceito.
-function defaultPaidAt(referenceDate: string): { paid_date: string; paid_time: string } {
-  const now = nowInSaoPaulo();
-  return { paid_date: now.date <= referenceDate ? now.date : referenceDate, paid_time: now.time };
-}
-
-export function MarkPaidModal({
-  request,
-  onClose,
-  referenceDate,
-}: ModalProps & { referenceDate: string }) {
+export function MarkPaidModal({ request, onClose }: ModalProps) {
+  // "Agora" real em SP, lido uma vez ao abrir o modal: pré-preenche data e hora e limita a data.
+  const [now] = useState(() => nowInSaoPaulo());
   const form = useForm<MarkPaidForm>({
-    resolver: zodResolver(markPaidSchema(referenceDate)),
-    defaultValues: { ...defaultPaidAt(referenceDate), payment_reference: '' },
+    resolver: zodResolver(markPaidSchema(now.date)),
+    defaultValues: { paid_date: now.date, paid_time: now.time, payment_reference: '' },
   });
   const { mutation, submit } = useRequestAction(request.id, markRequestPaid, {
     successMessage: 'Pagamento registrado.',
@@ -196,8 +189,7 @@ export function MarkPaidModal({
                 <BusinessDateInput
                   label="Data do pagamento"
                   withAsterisk
-                  maxDate={referenceDate}
-                  defaultDate={referenceDate}
+                  maxDate={now.date}
                   name={field.name}
                   ref={field.ref}
                   value={field.value}
