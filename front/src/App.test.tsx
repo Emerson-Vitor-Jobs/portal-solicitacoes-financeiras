@@ -20,7 +20,6 @@ describe('protected routes and session', () => {
     const { router, queryClient } = renderApp('/');
     expect(await screen.findByText('Fernanda Financeiro')).toBeInTheDocument();
 
-    // A sessão cai no servidor; a próxima chamada qualquer recebe 401 UNAUTHENTICATED.
     state.currentUser = null;
     await act(() => queryClient.invalidateQueries());
 
@@ -48,7 +47,6 @@ describe('protected routes and session', () => {
 
     server.use(http.get('*/api/auth/me', () => problem(500, 'INTERNAL', 'x')));
     await act(() => queryClient.refetchQueries({ queryKey: sessionQueryKey }));
-    // O TanStack Query notifica os componentes num tick seguinte; espera a tela reagir.
     await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
 
     expect(queryClient.getQueryState(sessionQueryKey)?.status).toBe('error');

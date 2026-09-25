@@ -25,8 +25,6 @@ import { dashboardQueryKey, fetchSummary } from './api';
 
 type IndicatorProps = { label: string; value: string; hint: string; highlight?: boolean };
 
-// O indicador principal (total pendente, o que espera decisão) vem em destaque escuro, como o card de saldo do
-// sistema visual; os demais ficam em cards brancos (§17).
 function Indicator({ label, value, hint, highlight = false }: IndicatorProps) {
   return (
     <Card
@@ -121,7 +119,6 @@ export function DashboardPage() {
       )}
       {summary.isSuccess && (
         <>
-          {/* Os números se autodescrevem pela reference_date do servidor (§14.2). */}
           <Text c={palette.textSecondary} size="sm">
             {scope} Data de referência: {formatBusinessDate(summary.data.reference_date)}.
           </Text>

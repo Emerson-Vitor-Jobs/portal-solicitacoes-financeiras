@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { errorMessage, hasCode } from '../../api/errors';
+import type { RequestStatus } from '../../api/types';
 import { OverdueBadge } from '../../components/OverdueBadge';
 import { QueryErrorAlert } from '../../components/QueryErrorAlert';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -76,7 +77,10 @@ function RequestData({ request }: { request: RequestDetail }) {
   );
 }
 
-// Histórico só de leitura (a auditoria não é editável pela interface).
+function historyReasonLabel(newStatus: RequestStatus): string {
+  return newStatus === 'PAID' ? 'Referência' : 'Motivo';
+}
+
 function History({ request }: { request: RequestDetail }) {
   if (request.history.length === 0) {
     return <Text c={palette.textSecondary}>Sem eventos registrados.</Text>;
@@ -96,9 +100,8 @@ function History({ request }: { request: RequestDetail }) {
             {event.actor.name} · {formatInstant(event.created_at)}
           </Text>
           {event.reason !== null && (
-            // No pagamento, o `reason` do evento é a referência do pagamento (como nos eventos do seed).
             <Text size="sm">
-              {event.new_status === 'PAID' ? 'Referência' : 'Motivo'}: {event.reason}
+              {historyReasonLabel(event.new_status)}: {event.reason}
             </Text>
           )}
         </Timeline.Item>
@@ -107,7 +110,6 @@ function History({ request }: { request: RequestDetail }) {
   );
 }
 
-// Ação principal em preto (a cor de ação do sistema visual, §17); rejeitar é destrutiva, em vermelho com contorno.
 const ACTION_BUTTONS: Record<
   RequestAction,
   { label: string; variant: 'filled' | 'outline'; color?: string }
@@ -132,8 +134,6 @@ export function RequestDetailPage() {
     );
   }
 
-  // Tela de erro só sem dados: um refetch que falha (foco da janela, recarga depois de um 409) não
-  // troca a página nem desmonta um modal aberto com o que já foi digitado.
   if (detail.data === undefined) {
     const notFound = hasCode(detail.error, 'NOT_FOUND');
     return (
@@ -188,7 +188,6 @@ export function RequestDetailPage() {
         </Alert>
       )}
 
-      {/* O valor em destaque, como o total do recibo no sistema visual (§17). */}
       <Card bg={palette.cream} withBorder={false}>
         <Group justify="space-between" align="flex-end" wrap="wrap">
           <div>

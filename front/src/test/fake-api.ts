@@ -3,8 +3,6 @@ import { CSRF_HEADER, CSRF_HEADER_VALUE } from '../api/client';
 import type { components } from '../api/schema';
 import { DASHBOARDS, REFERENCE_DATE, REQUESTS, SEED_PASSWORDS, USERS } from './fixtures';
 
-// Fake da API em MSW: responde no formato do contrato (tipos gerados), com o estado em memória.
-// Não reimplementa as regras do back: é só o suficiente pros testes de componente e de fluxo.
 type Schemas = components['schemas'];
 type Problem = Schemas['Problem'];
 type RequestDetail = Schemas['RequestDetail'];
@@ -106,7 +104,6 @@ async function log(request: Request): Promise<void> {
   });
 }
 
-// Todo POST sem o header anti-CSRF recebe 403, como no back (§8.3).
 function missingCsrf(request: Request): boolean {
   return request.headers.get(CSRF_HEADER) !== CSRF_HEADER_VALUE;
 }

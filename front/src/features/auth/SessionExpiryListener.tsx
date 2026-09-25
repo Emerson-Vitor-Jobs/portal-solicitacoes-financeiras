@@ -5,9 +5,6 @@ import { setUnauthenticatedListener } from '../../api/client';
 import { sessionQueryKey } from './api';
 import type { LoginLocationState } from './login-state';
 
-// Raiz das rotas: liga o 401 UNAUTHENTICATED do client ao roteador. Se havia uma sessão carregada,
-// ela caiu no servidor: limpa o cache e manda pro /login com "Sua sessão expirou". Sem sessão
-// carregada (primeiro acesso), quem redireciona é o RequireAuth, sem a mensagem.
 export function SessionExpiryListener() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();

@@ -42,10 +42,7 @@ const STATUS_OPTIONS = enumOptions(STATUS_LABELS);
 
 const SUPPLIER_DEBOUNCE_MS = 400;
 
-// Busca por fornecedor com debounce. O texto digitado fica no estado local; a URL recebe o valor
-// depois da pausa. Se a URL mudar por outro caminho (voltar, limpar filtros), o campo acompanha e
-// o envio pendente é cancelado, para não devolver à URL um texto que já foi descartado.
-function useSupplierSearch(urlValue: string, onCommit: (value: string) => void) {
+function useDebouncedSupplierSearch(urlValue: string, onCommit: (value: string) => void) {
   const [text, setText] = useState(urlValue);
   const [syncedValue, setSyncedValue] = useState(urlValue);
   if (urlValue !== syncedValue) {
@@ -54,8 +51,6 @@ function useSupplierSearch(urlValue: string, onCommit: (value: string) => void) 
   }
   const commit = useDebouncedCallback(onCommit, SUPPLIER_DEBOUNCE_MS);
   useEffect(() => {
-    // O envio feito pelo próprio debounce já terminou quando a URL muda; aqui só sobra o pendente
-    // de uma mudança externa.
     commit.cancel();
   }, [urlValue, commit]);
 
@@ -72,8 +67,7 @@ function useSupplierSearch(urlValue: string, onCommit: (value: string) => void) 
   };
 }
 
-// Colunas curtas nunca quebram: sem espaço, a tabela ganha rolagem horizontal em vez de cortar o status.
-const NOWRAP = { whiteSpace: 'nowrap' } as const;
+const noWrapCell = { whiteSpace: 'nowrap' } as const;
 
 function RequestRow({ item }: { item: RequestListItem }) {
   return (
@@ -83,8 +77,8 @@ function RequestRow({ item }: { item: RequestListItem }) {
           {item.supplier_name}
         </Anchor>
       </Table.Td>
-      <Table.Td style={NOWRAP}>{item.invoice_number}</Table.Td>
-      <Table.Td ta="right" style={NOWRAP}>
+      <Table.Td style={noWrapCell}>{item.invoice_number}</Table.Td>
+      <Table.Td ta="right" style={noWrapCell}>
         {formatCents(item.amount_cents)}
       </Table.Td>
       <Table.Td>
@@ -93,10 +87,10 @@ function RequestRow({ item }: { item: RequestListItem }) {
           <OverdueBadge overdue={item.is_overdue} />
         </Group>
       </Table.Td>
-      <Table.Td style={NOWRAP}>
+      <Table.Td style={noWrapCell}>
         <StatusBadge status={item.status} />
       </Table.Td>
-      <Table.Td style={NOWRAP}>{item.requester.name}</Table.Td>
+      <Table.Td style={noWrapCell}>{item.requester.name}</Table.Td>
     </Table.Tr>
   );
 }
@@ -116,7 +110,7 @@ export function RequestListPage() {
     setSearchParams((prev) => withFilter(prev, name, value), { replace });
   }
 
-  const supplier = useSupplierSearch(filters.supplier, (value) =>
+  const supplier = useDebouncedSupplierSearch(filters.supplier, (value) =>
     setFilter('supplier', value, true),
   );
 
@@ -190,7 +184,6 @@ export function RequestListPage() {
       )}
 
       {list.isSuccess && list.data.data.length === 0 && (
-        // Estado vazio com a ilustração da caixa vazia (§17): diz o que aconteceu e oferece a saída.
         <Card>
           <Stack align="center" gap="xs" py="lg" ta="center">
             <Image src={emptyIllustration} alt="" w={180} />
@@ -216,7 +209,6 @@ export function RequestListPage() {
       )}
 
       {list.isSuccess && list.data.data.length > 0 && (
-        // Tabela numa superfície branca sobre o fundo cinza, como os cards do sistema visual (§17).
         <Card p={0} pos="relative">
           <LoadingOverlay visible={list.isPlaceholderData} />
           <Table.ScrollContainer minWidth={900}>

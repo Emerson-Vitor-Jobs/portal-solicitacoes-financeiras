@@ -26,7 +26,6 @@ export const routes: RouteObject[] = [
               {
                 path: '/requests/new',
                 element: (
-                  // O modal abre sobre a lista (a página continua visível atrás, como contexto).
                   <RequireRole role="REQUESTER">
                     <RequestListPage />
                     <NewRequestModal />

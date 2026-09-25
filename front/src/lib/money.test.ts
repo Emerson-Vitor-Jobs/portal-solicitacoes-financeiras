@@ -9,7 +9,6 @@ describe('#1 parseBRLToCents', () => {
     },
   );
 
-  // Tabela da DECISOES_FUNDACAO §14.1.
   test.each([
     ['1,5', 150],
     ['1,55', 155],

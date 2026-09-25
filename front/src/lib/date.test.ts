@@ -9,7 +9,6 @@ import {
   toSaoPauloRfc3339,
 } from './date';
 
-// Roda com o relógio do processo em fusos diferentes: o resultado não pode depender dele.
 afterEach(() => {
   vi.unstubAllEnvs();
 });
@@ -59,7 +58,6 @@ describe('instants in America/Sao_Paulo', () => {
   test('São Paulo date + time → RFC 3339 with the São Paulo offset computed by Intl', () => {
     vi.stubEnv('TZ', 'Asia/Tokyo');
     expect(toSaoPauloRfc3339('2026-09-18', '10:30')).toBe('2026-09-18T10:30:00-03:00');
-    // Em dezembro de 2018 São Paulo ainda tinha horário de verão (-02:00): o offset não é fixo.
     expect(toSaoPauloRfc3339('2018-12-01', '10:00')).toBe('2018-12-01T10:00:00-02:00');
   });
 

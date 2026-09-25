@@ -6,9 +6,6 @@ import { CATEGORY_LABELS, enumValues } from '../../lib/labels';
 import { parseBRLToCents } from '../../lib/money';
 import type { CreateRequestBody } from './api';
 
-// Validação de FORMA no front (obrigatório, tamanho, máscara completa). Regra de domínio (DV do
-// CNPJ, duplicidade) é do back e volta como 422/409 no campo certo.
-// A saída do schema é o corpo do POST /requests do contrato (tipo gerado).
 const categories = enumValues(CATEGORY_LABELS);
 
 export const newRequestSchema = z.object({

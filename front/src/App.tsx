@@ -1,4 +1,3 @@
-// Fontes empacotadas no build (funcionam sem internet): IBM Plex Sans nos títulos, Roboto no corpo (§17).
 import '@fontsource/ibm-plex-sans/500.css';
 import '@fontsource/ibm-plex-sans/600.css';
 import '@fontsource/roboto/400.css';

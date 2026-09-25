@@ -6,7 +6,6 @@ import { renderApp } from '../../test/render';
 import { FINANCE_EMAIL, loginAs, problem, REQUESTER_EMAIL, state } from '../../test/fake-api';
 import type { RequestStatus } from '../../api/types';
 
-// Solicitações da Ana no seed, uma por status (visíveis para ela e para o financeiro).
 const REQUEST_BY_STATUS: Record<RequestStatus, string> = {
   PENDING: '20000000-0000-4000-8000-000000000001',
   APPROVED: '20000000-0000-4000-8000-000000000007',
@@ -66,7 +65,6 @@ describe('RequestDetailPage', () => {
 
   test('a missing or someone else\'s request (404) shows "não encontrada"', async () => {
     loginAs(REQUESTER_EMAIL);
-    // A 000002 é do Bruno: para a Ana, o back responde 404.
     renderApp('/requests/20000000-0000-4000-8000-000000000002');
 
     expect(await screen.findByText('Solicitação não encontrada')).toBeInTheDocument();
@@ -138,7 +136,6 @@ describe('RequestDetailPage', () => {
     renderApp(`/requests/${REQUEST_BY_STATUS.PENDING}`);
     await user.click(await screen.findByRole('button', { name: 'Aprovar' }));
 
-    // Outra pessoa rejeitou antes: o estado no "servidor" já mudou.
     const request = state.requests.find((r) => r.id === REQUEST_BY_STATUS.PENDING);
     if (!request) throw new Error('missing fixture');
     request.status = 'REJECTED';
@@ -154,7 +151,6 @@ describe('RequestDetailPage', () => {
   });
 
   test('mark as paid: prefills with the real São Paulo now and sends RFC 3339 with offset', async () => {
-    // Só o Date é falso (o relógio real é 25/09/2026 15:30 em SP; a reference_date é 18/09).
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-25T18:30:00Z'));
     const user = userEvent.setup();

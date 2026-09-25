@@ -16,8 +16,6 @@ export function RequireAuth() {
     );
   }
 
-  // Só sem dados: um refetch em segundo plano (foco da janela) que falha por rede ou 5xx não derruba
-  // o app nem perde o que está em edição. Um 401 UNAUTHENTICATED vai pro login pelo listener do client.
   if (session.data === undefined) {
     if (hasCode(session.error, 'UNAUTHENTICATED')) {
       const loginState: LoginLocationState = { from: location.pathname + location.search };

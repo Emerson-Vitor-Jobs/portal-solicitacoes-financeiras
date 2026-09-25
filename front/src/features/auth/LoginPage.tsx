@@ -46,7 +46,6 @@ export function LoginPage() {
   const mutation = useMutation({
     mutationFn: login,
     onSuccess: async () => {
-      // A sessão completa (com reference_date) vem do /auth/me, que o RequireAuth busca de novo.
       queryClient.removeQueries({ queryKey: sessionQueryKey });
       await navigate(loginState.from ?? '/', { replace: true });
     },
@@ -61,8 +60,6 @@ export function LoginPage() {
   const { errors } = form.formState;
 
   return (
-    // Fundo creme da marca, com a ilustração ao lado do formulário (some só no celular), como a tela de
-    // entrada do sistema visual (§17).
     <Center mih="100vh" p="md" bg={palette.cream}>
       <SimpleGrid
         cols={{ base: 1, sm: 2 }}

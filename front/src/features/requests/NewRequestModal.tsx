@@ -29,8 +29,6 @@ import {
 
 const CATEGORY_OPTIONS = enumOptions(CATEGORY_LABELS);
 
-// Nova solicitação em modal, aberto sobre a lista pela rota /requests/new: o link continua compartilhável, e
-// fechar volta pra onde a pessoa estava (a lista com os filtros dela) ou, se entrou direto pelo link, pra lista.
 export function NewRequestModal() {
   const { reference_date } = useSession();
   const navigate = useNavigate();
@@ -38,8 +36,7 @@ export function NewRequestModal() {
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const lock = useSubmitLock();
-  // Erros que não pertencem a um campo do formulário (ex.: 403, 500, campo desconhecido no 422).
-  const [formError, setFormError] = useState<string | null>(null);
+  const [nonFieldError, setNonFieldError] = useState<string | null>(null);
 
   const form = useForm<NewRequestInput, unknown, NewRequestOutput>({
     resolver: zodResolver(newRequestSchema),
@@ -63,29 +60,28 @@ export function NewRequestModal() {
       }
       if (isApiError(error) && error.code === 'VALIDATION_FAILED') {
         const unmatched = applyFieldErrors(form.setError, error.fieldErrors, NEW_REQUEST_FIELD_MAP);
-        setFormError(
+        setNonFieldError(
           unmatched.length > 0 ? unmatched.map((fieldError) => fieldError.message).join(' ') : null,
         );
         return;
       }
-      setFormError(errorMessage(error));
+      setNonFieldError(errorMessage(error));
     },
     onSettled: () => lock.release(),
   });
 
   const submit = form.handleSubmit(
     (values) => {
-      setFormError(null);
+      setNonFieldError(null);
       mutation.mutate(toCreateBody(values));
     },
     () => lock.release(),
   );
 
   const close = () => {
-    // Não fecha no meio do envio: o resultado ainda vai decidir pra onde ir.
     if (mutation.isPending) return;
-    // location.key === 'default': entrou direto pelo link, sem página anterior no app pra voltar.
-    if (location.key === 'default') void navigate('/requests');
+    const openedFromDirectLink = location.key === 'default';
+    if (openedFromDirectLink) void navigate('/requests');
     else void navigate(-1);
   };
 
@@ -107,18 +103,17 @@ export function NewRequestModal() {
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          // Anti-duplo-envio: o segundo clique é ignorado enquanto o primeiro não termina.
           if (!lock.tryAcquire()) return;
           submit(event).catch((error: unknown) => {
             lock.release();
-            setFormError(errorMessage(error));
+            setNonFieldError(errorMessage(error));
           });
         }}
       >
         <Stack>
-          {formError && (
+          {nonFieldError && (
             <Alert color="red" role="alert" title="Não foi possível criar a solicitação">
-              {formError}
+              {nonFieldError}
             </Alert>
           )}
           <SimpleGrid cols={{ base: 1, sm: 2 }}>

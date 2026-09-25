@@ -5,8 +5,6 @@ import { server } from '../../test/msw';
 import { renderApp } from '../../test/render';
 import { FINANCE_EMAIL, loginAs, problem, REQUESTER_EMAIL, state } from '../../test/fake-api';
 
-// Os campos são procurados DENTRO do modal: a lista aberta atrás dele também tem campos "Fornecedor" e
-// "Vencimento" (os filtros).
 function modal() {
   return within(screen.getByRole('dialog', { name: 'Nova solicitação' }));
 }
@@ -59,7 +57,6 @@ describe('#10 NewRequestModal', () => {
   test('#10 double-submit guard: two quick clicks = 1 POST, button locked while sending', async () => {
     const user = userEvent.setup();
     loginAs(REQUESTER_EMAIL);
-    // Segura a resposta do POST até o teste liberar, para ver o botão durante o envio.
     let release = () => {};
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -67,7 +64,7 @@ describe('#10 NewRequestModal', () => {
     server.use(
       http.post('*/api/requests', async () => {
         await gate;
-        return undefined; // segue para o handler padrão do fake
+        return undefined;
       }),
     );
     renderApp('/requests/new');
@@ -89,7 +86,6 @@ describe('#10 NewRequestModal', () => {
     loginAs(REQUESTER_EMAIL);
     renderApp('/requests/new');
 
-    // CNPJ + nota do seed (Aurora, NF-2026-1001) já existem no fake.
     await fillValidForm(user, 'NF-2026-1001');
     await user.clear(modal().getByLabelText(/CNPJ do fornecedor/));
     await user.type(modal().getByLabelText(/CNPJ do fornecedor/), '10000000000145');
@@ -103,7 +99,6 @@ describe('#10 NewRequestModal', () => {
     expect(invoice).toHaveAccessibleDescription(
       /Já existe uma solicitação com este CNPJ e número de nota fiscal\./,
     );
-    // O botão volta a funcionar para corrigir e reenviar.
     expect(screen.getByRole('button', { name: 'Enviar solicitação' })).toBeEnabled();
   });
 

@@ -5,7 +5,6 @@ import { render } from '../test/render';
 import { parseBRLToCents } from '../lib/money';
 import { MoneyInput } from './MoneyInput';
 
-// Mostra os centavos que o formulário enviaria, para o teste conferir o valor e não só o texto.
 function Harness() {
   const [text, setText] = useState('');
   return (

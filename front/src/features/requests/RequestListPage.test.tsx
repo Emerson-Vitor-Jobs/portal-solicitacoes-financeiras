@@ -6,7 +6,6 @@ import { renderApp } from '../../test/render';
 import { FINANCE_EMAIL, loginAs, problem, REQUESTER_EMAIL, state } from '../../test/fake-api';
 import { REQUESTS } from '../../test/fixtures';
 
-// Parâmetros da última chamada ao GET /api/requests que o fake recebeu.
 function lastListParams(): Record<string, string> {
   const calls = state.requestLog.filter(
     (r) => r.method === 'GET' && r.url.pathname === '/api/requests',
@@ -64,7 +63,6 @@ describe('RequestListPage', () => {
     await user.type(screen.getByRole('textbox', { name: 'Fornecedor' }), 'aurora');
 
     await waitFor(() => expect(lastListParams().supplier).toBe('aurora'));
-    // Uma chamada só depois da pausa, não uma por letra.
     const supplierCalls = state.requestLog.filter((r) => r.url.searchParams.has('supplier'));
     expect(supplierCalls).toHaveLength(1);
     expect(router.state.location.search).toBe('?supplier=aurora');
@@ -78,7 +76,6 @@ describe('RequestListPage', () => {
 
     await user.type(screen.getByRole('textbox', { name: 'Fornecedor' }), 'aur');
     await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));
-    // Espera mais que o debounce: nada pode voltar para a URL nem para a API.
     await act(() => new Promise((resolve) => setTimeout(resolve, 600)));
 
     expect(screen.getByRole('textbox', { name: 'Fornecedor' })).toHaveValue('');
@@ -96,7 +93,6 @@ describe('RequestListPage', () => {
     await act(() => router.navigate('/requests?supplier=verde'));
     expect(input).toHaveValue('verde');
 
-    // Digitação pendente + navegação externa (voltar): o texto descartado não volta para a URL.
     await user.type(input, 'xyz');
     await act(() => router.navigate('/requests'));
     await act(() => new Promise((resolve) => setTimeout(resolve, 600)));
