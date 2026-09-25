@@ -1,6 +1,10 @@
 import { act, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http } from 'msw';
+import { server } from '../test/msw';
+import { sessionQueryKey } from './features/auth/api';
 import { renderApp } from '../test/render';
-import { FINANCE_EMAIL, loginAs, state } from './test/fake-api';
+import { FINANCE_EMAIL, loginAs, problem, REQUESTER_EMAIL, state } from './test/fake-api';
 
 describe('rotas protegidas e sessão', () => {
   test('sem sessão, qualquer rota protegida leva ao /login (sem dizer que expirou)', async () => {
@@ -31,5 +35,22 @@ describe('rotas protegidas e sessão', () => {
     expect(await screen.findByText('Fernanda Financeiro')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Solicitações' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Nova solicitação' })).not.toBeInTheDocument();
+  });
+
+  test('refetch da sessão que falha (5xx) com dados carregados não derruba a tela em edição', async () => {
+    const user = userEvent.setup();
+    loginAs(REQUESTER_EMAIL);
+    const { queryClient } = renderApp('/requests/new');
+    const supplier = await screen.findByLabelText(/Fornecedor/);
+    await user.type(supplier, 'Texto em edição');
+
+    server.use(http.get('*/api/auth/me', () => problem(500, 'INTERNAL', 'x')));
+    await act(() => queryClient.refetchQueries({ queryKey: sessionQueryKey }));
+    // O TanStack Query notifica os componentes num tick seguinte; espera a tela reagir.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+
+    expect(queryClient.getQueryState(sessionQueryKey)?.status).toBe('error');
+    expect(screen.queryByText('Não foi possível carregar a sessão')).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Fornecedor/)).toHaveValue('Texto em edição');
   });
 });
