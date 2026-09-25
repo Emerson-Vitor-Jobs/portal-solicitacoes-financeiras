@@ -1,4 +1,3 @@
-// Atalhos de requisição para os testes HTTP (app.inject), já com o header anti-CSRF nas escritas.
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { CSRF } from './server.js';
 
@@ -10,7 +9,7 @@ export const VALID_REQUEST = {
   competence: '2026-09',
   due_date: '2026-09-30',
   category: 'SERVIÇOS',
-  description: 'Teste de integração',
+  description: 'Integration test',
 } as const;
 
 export function http(app: FastifyInstance, cookie: string) {

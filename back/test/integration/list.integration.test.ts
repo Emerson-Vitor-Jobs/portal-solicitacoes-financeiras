@@ -1,6 +1,6 @@
-// GET /api/requests sobre o seed oficial: filtros e paginação no banco, escopo por papel (§4b, §7.3).
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import type { SeedRequest } from '../../src/repository/postgres/seed_data.js';
 import { readDataFile } from '../support/data.js';
 import { seedOfficialData, testPool } from '../support/db.js';
 import { VALID_REQUEST, http } from '../support/http.js';
@@ -22,12 +22,6 @@ interface ListBody {
   total: number;
   total_pages: number;
   reference_date: string;
-}
-interface SeedRequest {
-  id: string;
-  requester_id: string;
-  due_date: string;
-  created_at: string;
 }
 
 let app: FastifyInstance;
@@ -53,8 +47,8 @@ const list = async (client: ReturnType<typeof http>, query = '') => {
   return res.json<ListBody>();
 };
 
-describe('lista', () => {
-  test('FINANCE vê as 16, ordenadas por created_at DESC, com reference_date no envelope', async () => {
+describe('list', () => {
+  test('FINANCE sees all 16, ordered by created_at DESC, with reference_date in the envelope', async () => {
     const body = await list(fernanda, '?page_size=100');
     expect(body).toMatchObject({ total: 16, page: 1, page_size: 100, total_pages: 1 });
     expect(body.reference_date).toBe('2026-09-18');
@@ -62,34 +56,32 @@ describe('lista', () => {
       .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
       .map((r) => r.id);
     expect(body.data.map((r) => r.id)).toEqual(expectedOrder);
-    // #12 com a referência 18/09: as 4 vencidas do oráculo (vence hoje não conta).
     expect(body.data.filter((r) => r.is_overdue)).toHaveLength(4);
   });
 
-  test('REQUESTER vê só as próprias', async () => {
+  test('REQUESTER sees only their own', async () => {
     const body = await list(ana, '?page_size=100');
     expect(body.total).toBe(8);
     expect(body.data.every((r) => r.requester.id === ANA.id)).toBe(true);
   });
 
-  test('filtro por status', async () => {
+  test('status filter', async () => {
     const body = await list(fernanda, '?status=PENDING');
     expect(body.total).toBe(5);
     expect(body.data.every((r) => r.status === 'PENDING')).toBe(true);
   });
 
-  test('busca por fornecedor ignora acento e caixa: "servicos" acha "Serviços"', async () => {
+  test('supplier search ignores accents and case: "servicos" finds "Serviços"', async () => {
     const body = await list(fernanda, '?supplier=SERVICOS');
     expect(body.total).toBe(2);
     expect(body.data.every((r) => r.supplier_name === 'Aurora Serviços Digitais')).toBe(true);
     expect((await list(fernanda, `?supplier=${encodeURIComponent('comunicação')}`)).total).toBe(2);
   });
 
-  test('curingas digitados são literais: "%" e "_" não casam tudo', async () => {
+  test('typed wildcards are literal: "%" and "_" do not match everything', async () => {
     expect((await list(fernanda, `?supplier=${encodeURIComponent('%')}`)).total).toBe(0);
     expect((await list(fernanda, '?supplier=_')).total).toBe(0);
     expect((await list(fernanda, `?supplier=${encodeURIComponent('\\')}`)).total).toBe(0);
-    // E um nome que tem o caractere de verdade é achado.
     const cookie = await loginAs(app, ANA);
     await http(app, cookie).post('/api/requests', {
       ...VALID_REQUEST,
@@ -98,7 +90,7 @@ describe('lista', () => {
     expect((await list(fernanda, `?supplier=${encodeURIComponent('100%')}`)).total).toBe(1);
   });
 
-  test('período de vencimento é inclusivo nas duas pontas', async () => {
+  test('the due date range is inclusive on both ends', async () => {
     const body = await list(fernanda, '?due_from=2026-09-10&due_to=2026-09-18&page_size=100');
     const expected = seed.filter((r) => r.due_date >= '2026-09-10' && r.due_date <= '2026-09-18');
     expect(body.total).toBe(expected.length);
@@ -110,13 +102,13 @@ describe('lista', () => {
     );
   });
 
-  test('filtros combinados com escopo', async () => {
+  test('filters combined with scope', async () => {
     const body = await list(ana, '?status=PAID&supplier=verde');
     expect(body.total).toBe(1);
     expect(body.data[0]).toMatchObject({ supplier_name: 'Verde Nuvem Tecnologia', status: 'PAID' });
   });
 
-  test('paginação: páginas sem sobreposição; além da última → data vazia com o total certo', async () => {
+  test('pagination: pages do not overlap; past the last → empty data with the right total', async () => {
     const pages = await Promise.all(
       [1, 2, 3, 4].map((p) => list(fernanda, `?page=${p}&page_size=5`)),
     );
@@ -127,7 +119,7 @@ describe('lista', () => {
     expect(beyond).toMatchObject({ data: [], total: 16, total_pages: 4, page: 9 });
   });
 
-  test('#12 as datas do seed voltam sem deslocamento de fuso', async () => {
+  test('#12 seed dates come back without a time zone shift', async () => {
     const body = await list(fernanda, '?page_size=100');
     const byId = new Map(seed.map((r) => [r.id, r.due_date]));
     for (const r of body.data) expect(r.due_date).toBe(byId.get(r.id));

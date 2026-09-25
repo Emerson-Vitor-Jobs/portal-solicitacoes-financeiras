@@ -1,4 +1,3 @@
-// #9 fluxo completo pela API, com Postgres real e login argon2 de verdade: criar → aprovar → pagar.
 import type { FastifyInstance } from 'fastify';
 import pg from 'pg';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
@@ -39,8 +38,8 @@ afterEach(async () => {
   await app.close();
 });
 
-describe('#9 fluxo completo com trilha de auditoria', () => {
-  test('criar → aprovar → pagar; history com 3 eventos na ordem; paid_at é o informado', async () => {
+describe('#9 full flow with audit trail', () => {
+  test('create → approve → pay; history with 3 events in order; paid_at is the informed one', async () => {
     const ana = http(app, await loginAs(app, ANA));
     const fernanda = http(app, await loginAs(app, FERNANDA));
 
@@ -53,8 +52,6 @@ describe('#9 fluxo completo com trilha de auditoria', () => {
     expect(approved.json()).toMatchObject({ status: 'APPROVED' });
     const approvedAt = Date.parse(approved.json<Detail>().history.at(-1)!.created_at);
 
-    // Pago no instante da aprovação, como informado pelo financeiro (não o instante do registro do pagamento).
-    // Não pode passar do agora real (§6.3), então nada de somar tempo à aprovação.
     const paidAt = new Date(approvedAt).toISOString();
     const paid = await fernanda.post(`/api/requests/${id}/mark-paid`, {
       paid_at: paidAt,
@@ -76,26 +73,22 @@ describe('#9 fluxo completo com trilha de auditoria', () => {
     ]);
     expect(detail.history.map((e) => e.actor.id)).toEqual([ANA.id, FERNANDA.id, FERNANDA.id]);
     expect(detail.history[2]?.reason).toBe('PAG-2026-9001');
-    // A data de pagamento é dado próprio: não é o instante em que o evento foi registrado.
     const paidEvent = detail.history[2]!;
     expect(paidEvent.created_at).not.toBe(detail.paid_at);
-    // updated_at e o created_at do evento saem da mesma transação (now() = início dela, §6.4).
     expect(detail.updated_at).toBe(paidEvent.created_at);
 
-    // Estado final não é revertido.
     const again = await fernanda.post(`/api/requests/${id}/decision`, { decision: 'APPROVE' });
     expect(again.statusCode).toBe(409);
     expect(again.json()).toMatchObject({ code: 'INVALID_TRANSITION' });
   });
 });
 
-describe('política de log com erro real do banco (§14.5)', () => {
-  test('o 23505 provocado não deixa CNPJ, nota nem valor no log', async () => {
+describe('log policy with a real database error (§14.5)', () => {
+  test('the provoked 23505 leaves no CNPJ, invoice or amount in the log', async () => {
     const ana = http(app, await loginAs(app, ANA));
     expect((await ana.post('/api/requests', VALID_REQUEST)).statusCode).toBe(201);
     expect((await ana.post('/api/requests', VALID_REQUEST)).statusCode).toBe(409);
 
-    // O erro cru do pg carrega os valores no detail; o serializador tira tudo.
     const raw = await testPool()
       .query(
         `INSERT INTO requests (id, requester_id, supplier_name, supplier_cnpj, invoice_number, amount_cents,
@@ -109,7 +102,6 @@ describe('política de log com erro real do banco (§14.5)', () => {
     expect((raw as pg.DatabaseError).detail).toContain('10000000000145');
     expect(serializeError(raw)).toEqual({ name: 'error', code: '23505' });
 
-    await app.close();
     const text = logs.text;
     expect(text).toContain('"status":409');
     for (const secret of ['10000000000145', '10.000.000/0001-45', 'NF-2026-9001', '155313']) {

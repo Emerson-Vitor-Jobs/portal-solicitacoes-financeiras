@@ -23,7 +23,6 @@ export interface RequestRouteDeps {
 export function requestRoutes(app: FastifyInstance, deps: RequestRouteDeps): void {
   const r = app.withTypeProvider<ZodTypeProvider>();
   const c = deps.controller;
-  // Sessão primeiro, papel depois: os dois antes de ler o corpo e de buscar o recurso (§5).
   const session = authenticate(deps.auth);
   const requester = [session, requireRole('REQUESTER')];
   const finance = [session, requireRole('FINANCE')];

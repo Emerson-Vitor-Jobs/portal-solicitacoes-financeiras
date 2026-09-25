@@ -1,12 +1,12 @@
-// App HTTP montado com fakes (sem banco), para os testes com app.inject().
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
+import type { LoginRateLimit } from '../../src/config.js';
 import { AuthController } from '../../src/handler/http/controller/auth.js';
 import { DashboardController } from '../../src/handler/http/controller/dashboard.js';
 import { RequestController } from '../../src/handler/http/controller/requests.js';
 import type { LogStream } from '../../src/handler/http/logging.js';
 import type { HealthDeps } from '../../src/handler/http/router/health.js';
-import type { LoginRateLimit } from '../../src/handler/http/router/hooks.js';
 import { buildServer } from '../../src/handler/http/server.js';
+import { CSRF_HEADER, CSRF_VALUE, SESSION_COOKIE } from '../../src/handler/http/session.js';
 import { AuthService } from '../../src/service/auth.js';
 import {
   DashboardService,
@@ -17,12 +17,10 @@ import { RequestService } from '../../src/service/requests.js';
 import { FakeAuthRepository, fakeHash, fakeVerifyPassword } from './fake_auth.js';
 import { FakeRequestRepository } from './fake_requests.js';
 
-export const CSRF = { 'x-requested-with': 'gex-web' } as const;
+export const CSRF = { [CSRF_HEADER]: CSRF_VALUE };
 
-// Limites altos: os testes que não são do rate limit logam várias vezes com o mesmo e-mail.
 export const RELAXED_RATE_LIMIT: LoginRateLimit = { perEmail: 1000, perIp: 1000, windowMs: 60_000 };
 
-// Fake da porta do dashboard: devolve números fixos e guarda o escopo recebido.
 export class FakeDashboardRepository implements DashboardRepository {
   readonly scopes: SummaryScope[] = [];
 
@@ -65,11 +63,12 @@ export async function buildTestServer(options: TestServerOptions = {}): Promise<
     now,
     today,
     verifyPassword: fakeVerifyPassword,
-    dummyPasswordHash: fakeHash('senha-do-usuario-ficticio'),
+    dummyPasswordHash: fakeHash('dummy-user-password'),
   });
   const app = await buildServer({
     trustProxy: false,
     logger: options.logStream ? { stream: options.logStream } : false,
+    logLevel: 'info',
     health: options.health ?? { ping: () => Promise.resolve() },
     auth: {
       service: auth,
@@ -83,7 +82,6 @@ export async function buildTestServer(options: TestServerOptions = {}): Promise<
   return { app, authRepo, requestRepo, dashboardRepo };
 }
 
-// Faz login pela API e devolve o header Cookie pronto para as próximas requisições.
 export async function loginAs(
   app: FastifyInstance,
   user: { email: string; password: string },
@@ -94,19 +92,12 @@ export async function loginAs(
     headers: CSRF,
     payload: { email: user.email, password: user.password },
   });
-  if (res.statusCode !== 200) throw new Error(`login falhou no teste: ${res.statusCode}`);
+  if (res.statusCode !== 200) throw new Error(`login failed in test: ${res.statusCode}`);
   return sessionCookieOf(res);
 }
 
 export function sessionCookieOf(res: LightMyRequestResponse): string {
-  const sid = res.cookies.find((c) => c.name === 'sid');
-  if (!sid) throw new Error('resposta sem cookie sid');
-  return `sid=${sid.value}`;
-}
-
-export function expectProblemShape(res: LightMyRequestResponse): unknown {
-  if (!String(res.headers['content-type']).includes('application/problem+json')) {
-    throw new Error(`esperava application/problem+json, veio ${res.headers['content-type']}`);
-  }
-  return res.json();
+  const sid = res.cookies.find((c) => c.name === SESSION_COOKIE);
+  if (!sid) throw new Error('response without the session cookie');
+  return `${SESSION_COOKIE}=${sid.value}`;
 }

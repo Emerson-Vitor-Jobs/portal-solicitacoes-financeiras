@@ -1,4 +1,3 @@
-// Controller fino: chama o service e converte domínio → contrato.
 import type { z } from 'zod';
 import type { DashboardService, DashboardView } from '../../../service/dashboard.js';
 import type { dashboardSummarySchema } from '../../../types/dashboard.js';

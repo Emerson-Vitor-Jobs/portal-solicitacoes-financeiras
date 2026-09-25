@@ -1,4 +1,3 @@
-// Os usuários do seed oficial (data/seed_users.json), usados pelos testes.
 import type { User } from '../../src/types/domain.js';
 
 export const ANA: User & { password: string } = {

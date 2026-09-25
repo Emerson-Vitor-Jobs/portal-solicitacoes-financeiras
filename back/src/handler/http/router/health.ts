@@ -6,7 +6,6 @@ export interface HealthDeps {
   ping: () => Promise<void>;
 }
 
-// GET /api/health: usado pelo healthcheck do compose. Responde 503 se o banco não responde.
 export function healthRoutes(app: FastifyInstance, deps: HealthDeps): void {
   app.withTypeProvider<ZodTypeProvider>().get('/api/health', {
     schema: {
@@ -20,10 +19,11 @@ export function healthRoutes(app: FastifyInstance, deps: HealthDeps): void {
     handler: async (request, reply) => {
       try {
         await deps.ping();
-        return await reply.code(200).send({ status: 'ok' });
+        return { status: 'ok' as const };
       } catch (err) {
-        request.log.error({ err: { name: (err as Error).name } }, 'health: banco indisponível');
-        return await reply.code(503).send({ status: 'unavailable' });
+        request.log.error({ err }, 'health: database unavailable');
+        reply.code(503);
+        return { status: 'unavailable' as const };
       }
     },
   });

@@ -19,36 +19,33 @@ import { dashboardRoutes } from './router/dashboard.js';
 import { healthRoutes, type HealthDeps } from './router/health.js';
 import { registerGlobalHooks } from './router/hooks.js';
 import { requestRoutes } from './router/requests.js';
+import { SESSION_COOKIE } from './session.js';
 
-// Mensagens de validação do Zod em português, como as do domínio (o `errors[]` do 422 chega à tela).
 z.config(z.locales.ptBR());
 
 export interface ServerDeps {
   trustProxy: string | false;
-  // false desliga o log (testes); um stream captura as linhas (teste da política de log, §14.5).
   logger?: false | { stream: LogStream };
+  logLevel: string;
   health: HealthDeps;
   auth: AuthRouteDeps;
   requests: RequestController;
   dashboard: DashboardController;
 }
 
-// Monta o app sem abrir porta: os testes usam app.inject() e o gerador do OpenAPI usa app.swagger().
 export async function buildServer(deps: ServerDeps): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: deps.logger === false ? false : loggerOptions(deps.logger?.stream),
+    logger: deps.logger === false ? false : loggerOptions(deps.logLevel, deps.logger?.stream),
     ...logControllerOptions(),
     trustProxy: deps.trustProxy,
   });
 
-  // Os schemas Zod das rotas validam a entrada e geram o OpenAPI (DECISOES_FUNDACAO §2).
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   registerErrorHandling(app);
   registerGlobalHooks(app);
 
   await app.register(fastifyCookie);
-  // Sem limite global: só o login tem baldes, montados na própria rota (router/hooks.ts, §14.6).
   await app.register(fastifyRateLimit, { global: false });
 
   await app.register(fastifySwagger, {
@@ -62,7 +59,7 @@ export async function buildServer(deps: ServerDeps): Promise<FastifyInstance> {
           'Autenticação por cookie de sessão `sid`.',
       },
       components: {
-        securitySchemes: { cookieAuth: { type: 'apiKey', in: 'cookie', name: 'sid' } },
+        securitySchemes: { cookieAuth: { type: 'apiKey', in: 'cookie', name: SESSION_COOKIE } },
       },
     },
     transform: jsonSchemaTransform,

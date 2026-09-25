@@ -1,4 +1,3 @@
-// Adaptador da porta RequestRepository (service/requests.ts) sobre as queries geradas pelo PgTyped.
 import pg from 'pg';
 import { DuplicateInvoiceError } from '../../service/errors.js';
 import type {
@@ -11,7 +10,13 @@ import type {
 } from '../../service/requests.js';
 import type { Status } from '../../types/common.js';
 import type { AuditEvent, FinanceRequest } from '../../types/domain.js';
-import { toCategory, toSafeInteger, toStatus } from './map.js';
+import {
+  fromCompetenceDate,
+  toCategory,
+  toCompetenceDate,
+  toSafeInteger,
+  toStatus,
+} from './map.js';
 import {
   countRequests,
   findRequestById,
@@ -29,7 +34,6 @@ import { withTransaction } from './tx.js';
 
 const DUPLICATE_INVOICE_CONSTRAINT = 'requests_supplier_cnpj_invoice_number_key';
 
-// Linha → domínio. Competência: o banco guarda o dia 1 do mês, a API fala YYYY-MM (§6.1).
 function mapRequest(row: IFindRequestByIdResult): FinanceRequest {
   return {
     id: row.id,
@@ -38,7 +42,7 @@ function mapRequest(row: IFindRequestByIdResult): FinanceRequest {
     supplierCnpj: row.supplier_cnpj,
     invoiceNumber: row.invoice_number,
     amountCents: toSafeInteger(row.amount_cents),
-    competence: row.competence.slice(0, 7),
+    competence: fromCompetenceDate(row.competence),
     dueDate: row.due_date,
     category: toCategory(row.category),
     description: row.description,
@@ -62,7 +66,6 @@ function mapAuditEvent(row: IListAuditEventsResult): AuditEvent {
   };
 }
 
-// `%`, `_` e `\` digitados na busca são literais, não curingas (§7.3). O ILIKE usa `\` como escape padrão.
 export function escapeLike(term: string): string {
   return term.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
@@ -88,7 +91,7 @@ class PgRequestStore implements RequestStore {
           supplierCnpj: request.supplierCnpj,
           invoiceNumber: request.invoiceNumber,
           amountCents: request.amountCents,
-          competence: `${request.competence}-01`,
+          competence: toCompetenceDate(request.competence),
           dueDate: request.dueDate,
           category: request.category,
           description: request.description,
@@ -96,7 +99,6 @@ class PgRequestStore implements RequestStore {
         this.client,
       );
     } catch (err) {
-      // O 23505 desta constraint vira erro de domínio; qualquer outro erro segue como veio.
       if (isDuplicateInvoice(err)) throw new DuplicateInvoiceError();
       throw err;
     }
@@ -170,13 +172,13 @@ export class RequestStorage implements RequestRepository {
       dueFrom: filter.dueFrom,
       dueTo: filter.dueTo,
     };
-    // Mesmo snapshot para a página e o total: o total nunca descreve outra versão dos dados (§4b).
     return withTransaction(
       this.pool,
       async (client) => {
         const rows = await listRequests.run({ ...where, ...page }, client);
         const [count] = await countRequests.run(where, client);
-        return { items: rows.map(mapRequest), total: toSafeInteger(count?.total ?? '0') };
+        if (!count) throw new Error('count aggregation returned no row');
+        return { items: rows.map(mapRequest), total: toSafeInteger(count.total) };
       },
       { isolation: 'REPEATABLE READ', readOnly: true },
     );

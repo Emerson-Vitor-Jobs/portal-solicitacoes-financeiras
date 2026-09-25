@@ -1,4 +1,3 @@
-// Controller fino: converte a entrada do contrato (snake_case) para o service e o domínio de volta (toXResponse).
 import type { FastifyReply } from 'fastify';
 import type { z } from 'zod';
 import type { RequestService } from '../../../service/requests.js';
@@ -81,7 +80,6 @@ export class RequestController {
       category: body.category,
       description: body.description,
     });
-    // 201 + Location do recurso criado (§5.6).
     reply.code(201).header('location', `/api/requests/${created.id}`);
     return toRequestDetailResponse(created);
   }
@@ -121,7 +119,6 @@ export class RequestController {
   }
 
   async markPaid(user: User, id: string, body: MarkPaidBody): Promise<RequestDetailResponse> {
-    // `paid_at` já validado como RFC 3339 com offset obrigatório (§6.2): é um instante, não uma data solta.
     const updated = await this.service.markPaid(user, id, {
       paidAt: new Date(body.paid_at),
       paymentReference: body.payment_reference,

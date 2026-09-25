@@ -1,5 +1,3 @@
-// Fake escrito à mão da porta RequestRepository (sem vi.mock). Simula o que importa do banco:
-// o UNIQUE (CNPJ, nota), o compare-and-set do status e o ROLLBACK quando a transação lança.
 import { DuplicateInvoiceError } from '../../src/service/errors.js';
 import type {
   NewAuditEvent,
@@ -22,7 +20,6 @@ const nameOf = (userId: string) => SEED_USERS.find((u) => u.id === userId)?.name
 export class FakeRequestRepository implements RequestRepository {
   requests = new Map<string, FinanceRequest>();
   events: StoredEvent[] = [];
-  // Roda entre a leitura do status e o UPDATE: permite simular outra transação vencendo a corrida.
   beforeUpdate: ((requests: Map<string, FinanceRequest>) => void) | null = null;
   private clock = Date.parse('2026-09-18T12:00:00Z');
 
@@ -31,7 +28,6 @@ export class FakeRequestRepository implements RequestRepository {
     return new Date(this.clock);
   }
 
-  // Atalho dos testes: põe uma solicitação num status qualquer, com os eventos coerentes.
   seed(overrides: Partial<FinanceRequest> & { id: string }, approvedAt?: Date): FinanceRequest {
     const request: FinanceRequest = {
       requester: { id: SEED_USERS[0]!.id, name: SEED_USERS[0]!.name },
@@ -74,7 +70,6 @@ export class FakeRequestRepository implements RequestRepository {
     try {
       return await fn(this.store());
     } catch (err) {
-      // ROLLBACK: nada do que a transação escreveu fica.
       this.requests = snapshot.requests;
       this.events = snapshot.events;
       throw err;

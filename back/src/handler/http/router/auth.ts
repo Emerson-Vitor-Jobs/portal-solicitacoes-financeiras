@@ -1,12 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import type { LoginRateLimit } from '../../../config.js';
 import type { AuthService } from '../../../service/auth.js';
 import { loginBodySchema, loginResponseSchema, meResponseSchema } from '../../../types/auth.js';
 import type { AuthController } from '../controller/auth.js';
-import { sessionUser } from '../request_context.js';
+import { sessionToken, sessionUser } from '../request_context.js';
 import { CSRF_NOTE, SESSION, errors } from './contract.js';
-import { SESSION_COOKIE, authenticate, loginRateLimit, type LoginRateLimit } from './hooks.js';
+import { authenticate, loginRateLimit } from './hooks.js';
 
 export interface AuthRouteDeps {
   service: AuthService;
@@ -51,8 +52,7 @@ export function authRoutes(app: FastifyInstance, deps: AuthRouteDeps): void {
     },
     onRequest: session,
     handler: async (request, reply) => {
-      // O hook authenticate já garantiu que o cookie existe e aponta para uma sessão válida.
-      await deps.controller.logout(request.cookies[SESSION_COOKIE] ?? '', reply);
+      await deps.controller.logout(sessionToken(request), reply);
       return reply.code(204).send(null);
     },
   });

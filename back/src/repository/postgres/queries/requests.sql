@@ -1,8 +1,3 @@
-/* Solicitações e trilha de auditoria. Regras de concorrência (DECISOES_FUNDACAO §5.5, §16.2):
-   - duplicidade: INSERT puro; quem barra é o UNIQUE (supplier_cnpj, invoice_number), inclusive em corrida;
-   - transição: compare-and-set (`WHERE id AND status = esperado`); 0 linhas = alguém mudou antes.
-   `now()` é o início da transação: o updated_at da solicitação e o created_at do evento saem iguais (§6.4). */
-
 /* @name InsertRequest */
 INSERT INTO requests (
   id, requester_id, supplier_name, supplier_cnpj, invoice_number, amount_cents, competence, due_date,
@@ -32,7 +27,6 @@ WHERE id = :id!;
 INSERT INTO audit_events (id, request_id, actor_id, previous_status, new_status, reason)
 VALUES (:id!, :requestId!, :actorId!, :previousStatus, :newStatus!, :reason);
 
-/* Instante em que a solicitação entrou no status (ex.: a aprovação, que limita a data de pagamento, §6.3). */
 /* @name FindTransitionInstant */
 SELECT created_at
 FROM audit_events
@@ -54,10 +48,6 @@ FROM audit_events e
 JOIN users u ON u.id = e.actor_id
 WHERE e.request_id = :requestId!
 ORDER BY e.created_at, e.id;
-
-/* Filtros opcionais: parâmetro nulo = sem filtro. `:supplier` chega com % _ \ já escapados (§7.3), e o ILIKE usa
-   o escape padrão (\). Vencimento é DATE, então o período é inclusivo nas duas pontas.
-   A página e o total rodam no mesmo snapshot REPEATABLE READ (§4b), com o mesmo WHERE. */
 
 /* @name ListRequests */
 SELECT r.id, r.requester_id, u.name AS requester_name, r.supplier_name, r.supplier_cnpj, r.invoice_number,

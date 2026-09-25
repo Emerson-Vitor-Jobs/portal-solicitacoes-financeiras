@@ -7,7 +7,6 @@ import {
   userRefSchema,
 } from './common.js';
 
-// Zod valida FORMA. Regra de negócio (DV do CNPJ, normalização, transição) é do service (DECISOES_FUNDACAO §2).
 const text = (max: number) => z.string().trim().min(1).max(max);
 
 export const competenceSchema = z
@@ -17,7 +16,6 @@ export const competenceSchema = z
 
 export const createRequestBodySchema = z.object({
   supplier_name: text(200),
-  // Com ou sem máscara; numérico ou alfanumérico. A validação dos dígitos é do service (§11).
   supplier_cnpj: z.string().trim().min(1).max(32),
   invoice_number: text(50),
   amount_cents: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
@@ -38,7 +36,6 @@ export const listRequestsQuerySchema = z.object({
 });
 export type ListRequestsQuery = z.infer<typeof listRequestsQuerySchema>;
 
-// Decisão: aprovar não leva motivo; rejeitar exige motivo (§5.1 → 422 se faltar).
 export const decisionBodySchema = z.discriminatedUnion('decision', [
   z.object({ decision: z.literal('APPROVE') }),
   z.object({ decision: z.literal('REJECT'), reason: text(500) }),

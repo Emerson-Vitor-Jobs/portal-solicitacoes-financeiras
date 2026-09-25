@@ -1,4 +1,3 @@
-// #8 dashboard contra o oráculo oficial: data/expected_results.json, com a referência 2026-09-18.
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { readDataFile } from '../support/data.js';
@@ -46,8 +45,8 @@ async function summaryAs(user: { email: string; password: string }) {
   return res.json<Totals & { reference_date: string }>();
 }
 
-describe('#8 dashboard contra o expected_results.json oficial', () => {
-  test('FINANCE: os números batem exatamente', async () => {
+describe('#8 dashboard against the official expected_results.json', () => {
+  test('FINANCE: the numbers match exactly', async () => {
     expect(await summaryAs(FERNANDA)).toEqual({
       ...oracleFields(expected.finance),
       reference_date: '2026-09-18',
@@ -57,7 +56,7 @@ describe('#8 dashboard contra o expected_results.json oficial', () => {
   test.each([
     ['Ana', ANA],
     ['Bruno', BRUNO],
-  ])('REQUESTER %s: só as próprias, batendo com o oráculo', async (_nome, user) => {
+  ])('REQUESTER %s: only their own, matching the oracle', async (_name, user) => {
     const oracle = expected.requesters[user.id];
     expect(oracle).toBeDefined();
     expect(await summaryAs(user)).toEqual({
@@ -66,8 +65,7 @@ describe('#8 dashboard contra o expected_results.json oficial', () => {
     });
   });
 
-  test('#12 o pagamento de 31/08 fica fora de "pago no mês" (setembro)', async () => {
-    // A solicitação 12 do seed foi paga em 2026-08-31T14:00-03:00: está PAID, mas não entra no número.
+  test('#12 the 08-31 payment stays out of "paid this month" (September)', async () => {
     const { rows } = await testPool().query<{ n: string }>(
       "SELECT amount_cents AS n FROM requests WHERE id = '20000000-0000-4000-8000-000000000012' AND status = 'PAID'",
     );
@@ -80,9 +78,8 @@ describe('#8 dashboard contra o expected_results.json oficial', () => {
     );
   });
 
-  test('#12 borda do fuso: 31/08 23:59:59 em SP (já 01/09 em UTC) fica fora; 01/09 00:00 em SP entra', async () => {
+  test('#12 time zone edge: 08-31 23:59:59 in SP (already 09-01 in UTC) stays out; 09-01 00:00 in SP is in', async () => {
     const before = await summaryAs(FERNANDA);
-    // Duas aprovadas do seed viram pagas nas bordas do mês (UPDATE em requests é permitido; a auditoria não).
     const pay = (id: string, paidAt: string) =>
       testPool().query(
         "UPDATE requests SET status = 'PAID', paid_at = $2, payment_reference = 'PAG-BORDA' WHERE id = $1 RETURNING amount_cents",
@@ -102,7 +99,7 @@ describe('#8 dashboard contra o expected_results.json oficial', () => {
     );
   });
 
-  test('sem sessão → 401', async () => {
+  test('no session → 401', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/dashboard/summary' });
     expect(res.statusCode).toBe(401);
   });

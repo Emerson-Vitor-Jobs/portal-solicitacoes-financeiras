@@ -1,6 +1,3 @@
-// Entidades do domínio, em camelCase (DECISOES_FUNDACAO §3). O formato do banco entra pelo `mapX()` do storage
-// e o do contrato sai pelo `toXResponse()` do controller; o domínio não conhece nenhum dos dois.
-// Data de negócio = string YYYY-MM-DD; instante = Date (§6.0).
 import type { Category, Role, Status } from './common.js';
 
 export interface User {
@@ -22,7 +19,6 @@ export interface FinanceRequest {
   supplierCnpj: string;
   invoiceNumber: string;
   amountCents: number;
-  // Mês de competência, YYYY-MM (no banco é o dia 1 do mês, §6.1).
   competence: string;
   dueDate: string;
   category: Category;
@@ -44,7 +40,6 @@ export interface AuditEvent {
   createdAt: Date;
 }
 
-// O que o service devolve: a solicitação + o "vencida" calculado no servidor contra a data de referência (§14.2).
 export interface RequestView extends FinanceRequest {
   isOverdue: boolean;
 }

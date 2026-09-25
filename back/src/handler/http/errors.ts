@@ -1,5 +1,3 @@
-// Único ponto que traduz erro → resposta HTTP, no formato RFC 9457 (DECISOES_FUNDACAO §4a e tabela da §5).
-// Erro não reconhecido vira 500 genérico: a mensagem interna nunca chega ao cliente.
 import type { FastifyError, FastifyInstance, FastifyReply } from 'fastify';
 import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod';
 import {
@@ -14,6 +12,14 @@ import {
   type FieldError,
 } from '../../service/errors.js';
 import type { Problem, ProblemCode } from '../../types/common.js';
+
+export class TooManyAttemptsError extends Error {
+  override readonly name = 'TooManyAttemptsError';
+  readonly statusCode = 429;
+  constructor() {
+    super('Muitas tentativas de login. Tente novamente em instantes.');
+  }
+}
 
 const TITLES: Record<number, string> = {
   400: 'Bad Request',
@@ -43,7 +49,6 @@ export function problem(
   };
 }
 
-// O corpo vai serializado à mão: o Content-Type é application/problem+json e não passa pelo serializador da rota.
 export function sendProblem(reply: FastifyReply, body: Problem): FastifyReply {
   return reply.code(body.status).type('application/problem+json').send(JSON.stringify(body));
 }
@@ -61,24 +66,21 @@ function fromDomain(err: DomainError): Problem {
   return problem(500, 'INTERNAL', 'Erro interno.');
 }
 
-// Caminho do Zod ("/supplier_name", "/items/0/name") → nome do campo ("supplier_name", "items.0.name").
-function fieldOf(instancePath: string, fallback: string): string {
+function fieldFromInstancePath(instancePath: string, fallback: string): string {
   const path = instancePath.replace(/^\//, '').replaceAll('/', '.');
   return path === '' ? fallback : path;
 }
 
 export function registerErrorHandling(app: FastifyInstance): void {
   app.setErrorHandler((err: FastifyError, request, reply) => {
-    // Corpo/query/params legíveis mas fora do schema → 422 com o erro por campo.
     if (hasZodFastifySchemaValidationErrors(err)) {
       const errors = err.validation.map((v) => ({
-        field: fieldOf(v.instancePath, err.validationContext ?? 'body'),
+        field: fieldFromInstancePath(v.instancePath, err.validationContext ?? 'body'),
         message: v.message ?? 'valor inválido',
       }));
       return sendProblem(reply, problem(422, 'VALIDATION_FAILED', 'Dados inválidos.', errors));
     }
     if (err instanceof DomainError) return sendProblem(reply, fromDomain(err));
-    // JSON quebrado ou corpo vazio: nem dá pra ler → 400 (§5.1).
     if (
       err.code === 'FST_ERR_CTP_INVALID_JSON_BODY' ||
       err.code === 'FST_ERR_CTP_EMPTY_JSON_BODY'
@@ -91,8 +93,7 @@ export function registerErrorHandling(app: FastifyInstance): void {
     if (err.statusCode === 429) {
       return sendProblem(reply, problem(429, 'TOO_MANY_REQUESTS', err.message));
     }
-    // Inesperado: loga só nome e código (a mensagem de um erro do pg pode trazer dados, §14.5).
-    request.log.error({ err: { name: err.name, code: err.code } }, 'erro não tratado');
+    request.log.error({ err }, 'unhandled error');
     return sendProblem(reply, problem(500, 'INTERNAL', 'Erro interno.'));
   });
 
