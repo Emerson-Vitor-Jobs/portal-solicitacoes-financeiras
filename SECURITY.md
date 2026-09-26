@@ -74,7 +74,7 @@ Não abra uma issue pública. Escreva para **emerson@risilva.com**, com os passo
 | `Server` | tudo | sem versão (`server_tokens off`) |
 
 ### Dependências
-- Versões exatas no `package.json` e `package-lock.json` commitado, para o avaliador instalar exatamente o que foi
+- Versões exatas no `package.json` e `package-lock.json` commitado, para qualquer instalação usar exatamente o que foi
   testado.
 - Imagens Docker com versão fixa (`node:24.21.0-alpine`, `nginx:1.30.5-alpine`, `postgres:16.4-alpine`,
   `dbmate:2.36.0`). A API roda como usuário `node`, não root.
@@ -83,10 +83,10 @@ Não abra uma issue pública. Escreva para **emerson@risilva.com**, com os passo
 
 | Limitação | Por quê | Em produção |
 | --- | --- | --- |
-| Tráfego em HTTP, cookie sem `Secure` e sem o prefixo `__Host-` | o avaliador roda em `http://localhost`, e o Chrome rejeita `__Host-` em http | HTTPS no proxy, `COOKIE_SECURE=true` e cookie `__Host-sid` |
+| Tráfego em HTTP, cookie sem `Secure` e sem o prefixo `__Host-` | o projeto roda em `http://localhost`, e o Chrome rejeita `__Host-` em http | HTTPS no proxy, `COOKIE_SECURE=true` e cookie `__Host-sid` |
 | Sem HSTS | só faz sentido com HTTPS | `Strict-Transport-Security` no proxy |
 | Rate limit em memória | uma instância da API | armazenamento compartilhado (ex.: Redis) com várias réplicas |
 | CSP com `style-src 'unsafe-inline'` | exigido pelos estilos inline do Mantine | nonce/hash de estilo, se a biblioteca permitir |
-| Postgres exposto na 5432 e API na 3001 | conveniência de avaliação (Swagger, inspeção) | só a rede interna; a API atrás do proxy |
+| Postgres exposto na 5432 e API na 3001 | conveniência local (Swagger, inspeção do banco) | só a rede interna; a API atrás do proxy |
 | Credenciais padrão no compose | reprodutibilidade do desafio | segredos fora do repositório (gerenciador de segredos) |
 | Sem MFA, bloqueio de conta ou recuperação de senha | o enunciado pede explicitamente para não implementar cadastro nem recuperação | conforme a política da empresa |

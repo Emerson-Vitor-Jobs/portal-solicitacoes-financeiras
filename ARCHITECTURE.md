@@ -63,7 +63,7 @@ flowchart TB
 - O contrato usa `snake_case` no JSON e no banco e `camelCase` no domínio. A conversão acontece só na borda, no `mapX()`
   e no `toXResponse()` (§3).
 
-### 2.2 O coração: uma transição de status
+### 2.2 Uma transição de status
 
 ```mermaid
 sequenceDiagram

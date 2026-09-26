@@ -88,7 +88,7 @@ completo está em [`docs/TESTING.md`](docs/TESTING.md).
 1. **CNPJ alfanumérico.** O enunciado fala em "14 dígitos". Guardamos as 14 posições sem máscara e aceitamos também o
    formato alfanumérico que a Receita Federal emite desde julho de 2026; os CNPJs numéricos se comportam exatamente
    como pedido. §11.
-2. **`APP_TODAY` com padrão no compose**, para a avaliação ser reproduzível já no primeiro `up`. §9.4.1.
+2. **`APP_TODAY` com padrão no compose**, para os números do painel serem reproduzíveis já no primeiro `up`. §9.4.1.
 3. **`JWT_SECRET` sem uso:** a autenticação é por sessão opaca no banco, que permite logout de verdade. §8.1.
 4. **`APP_TIMEZONE` ignorado:** o fuso é fixo em `America/Sao_Paulo`, como o enunciado exige.
 5. **Rotas sob `/api`** (`/api/auth/login`, `/api/requests`…), para front e API ficarem na mesma origem.

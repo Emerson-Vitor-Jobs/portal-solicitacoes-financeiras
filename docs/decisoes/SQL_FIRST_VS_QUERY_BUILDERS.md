@@ -15,12 +15,23 @@ r.rows[0] // tipo: any. O TypeScript não sabe nada.
 ```
 
 ### 2. SQL-first com codegen (sqlc no Go, PgTyped no TS): o estilo deste projeto
+A query real do projeto (`back/src/repository/postgres/queries/requests.sql`), que serve para todas as transições:
 ```sql
-/* @name ApproveRequest */
-UPDATE requests SET status='APPROVED' WHERE id=:id! AND status='PENDING' RETURNING *;
+/* @name UpdateRequestStatus */
+UPDATE requests
+SET status = :to!,
+    rejection_reason = :rejectionReason,
+    paid_at = :paidAt,
+    payment_reference = :paymentReference,
+    updated_at = now()
+WHERE id = :id! AND status = :from!
+RETURNING id;
 ```
 ```ts
-await approveRequest.run({ id }, client) // tipado, gerado a partir do SQL
+const rows = await updateRequestStatus.run(
+  { id, from: 'PENDING', to: 'APPROVED', rejectionReason: null, paidAt: null, paymentReference: null },
+  client,
+); // parâmetros e resultado tipados, gerados a partir do SQL
 ```
 Você escreve SQL, e a ferramenta gera o código tipado.
 
@@ -58,11 +69,11 @@ Você pensa em objetos, e o ORM decide qual SQL executar. Ele também cuida de r
      elegante e às vezes pior para o planejador do Postgres, o que não importa com o volume deste desafio.
 4. Um passo a menos no fluxo. O builder não pede para rodar o gerador; o PgTyped pede, e com o banco de pé.
 
-## O padrão SQL-first está "errado" no TypeScript?
+## SQL-first no TypeScript hoje
 
-Não, e o mercado está voltando para perto dele:
+O mercado tem se aproximado dele:
 - O Prisma, o ORM mais popular, lançou em 2024 o TypedSQL: arquivos `.sql` escritos à mão com tipos gerados.
-  É a ideia do sqlc, sinal de que até quem usa ORM sente falta de escrever SQL.
+  É a mesma ideia do sqlc.
 - O Drizzle e o Kysely crescem por terem cara de SQL em vez de escondê-lo.
 
 A favor: SQL é a linguagem que o banco entende, e com SQL-first o que se lê é exatamente o que roda. Não há N+1
@@ -76,6 +87,3 @@ desafio ficam explícitas no código:
 Num sistema financeiro, em que concorrência e consistência são centrais, isso pesa a favor.
 
 O preço: as queries dinâmicas ficam menos elegantes, e o fluxo ganha o passo de geração.
-
-No TypeScript, o SQL-first é minoria, mas uma minoria respeitada e em crescimento, e no domínio financeiro tem
-argumento forte.

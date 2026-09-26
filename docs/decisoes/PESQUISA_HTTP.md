@@ -8,7 +8,7 @@ abaixo são literais.
 
 | RFC | Assunto | Afeta este projeto? |
 | --- | --- | --- |
-| 9110 Semantics | Significado de métodos, status codes e headers, independente da versão | Sim, decide tudo aqui |
+| 9110 Semantics | Significado de métodos, status codes e headers, independente da versão | Sim: define os status codes e headers usados aqui |
 | 9111 Caching | Quem pode guardar uma resposta e por quanto tempo | Sim: dado financeiro autenticado não pode ficar em cache |
 | 9112 / 9113 / 9114 | HTTP/1.1, /2 e /3: como os bytes trafegam (TCP, multiplexação, QUIC) | Não na API. Um 409 significa o mesmo nas três versões; a versão é detalhe de deploy (nginx/CDN). |
 | 8446 TLS 1.3 | Criptografia do HTTPS | Só no deploy, onde influencia o atributo `Secure` do cookie. |
@@ -67,7 +67,7 @@ No desafio, todas as escritas são POST, então a proteção contra repetição 
 domínio. Repetir a criação bate no `UNIQUE (cnpj, nota)` e recebe 409; repetir a decisão bate no
 `WHERE status = esperado` e também recebe 409. Nenhuma repetição produz efeito duplo.
 
-## 4. A lacuna do 401 com cookie (achado importante)
+## 4. A lacuna do 401 com cookie
 
 O 401 exige `WWW-Authenticate` com um *challenge* de algum esquema. O
 [registro IANA de esquemas](https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml) tem

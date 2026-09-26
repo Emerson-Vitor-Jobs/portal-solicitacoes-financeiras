@@ -1,19 +1,19 @@
 # API
 
-A referência completa e interativa é o **Swagger**, em http://localhost:3000/api/docs (gerado das mesmas rotas que
+A referência completa e interativa é o Swagger, em http://localhost:3000/api/docs (gerado das mesmas rotas que
 validam as requisições; o JSON bruto fica em `/api/docs/json` e em [`back/openapi.json`](../back/openapi.json)).
 Este guia mostra o essencial e um passeio com `curl` pelo fluxo completo.
 
 ## Convenções
 
-- **Base:** `http://localhost:3000/api` (o nginx repassa pra API na mesma origem do front).
-- **JSON em `snake_case`.** Dinheiro sempre em **centavos inteiros** (`amount_cents`).
-- **Datas de negócio** (`due_date`, filtros): `YYYY-MM-DD`. **Competência:** `YYYY-MM`. **Instantes**
+- Base: `http://localhost:3000/api` (o nginx repassa para a API, na mesma origem do front).
+- JSON em `snake_case`. Dinheiro sempre em centavos inteiros (`amount_cents`).
+- Datas de negócio (`due_date`, filtros): `YYYY-MM-DD`. Competência: `YYYY-MM`. Instantes
   (`created_at`, `paid_at`…): RFC 3339. Na entrada, com offset obrigatório (`2026-09-25T14:30:00-03:00`); na saída,
   em UTC.
-- **Autenticação:** cookie de sessão `sid` (HttpOnly), definido pelo login.
-- **Todo `POST` exige `X-Requested-With: gex-web`** (proteção CSRF), senão responde 403.
-- **Erros:** `application/problem+json` (RFC 9457), com `code` estável e, no 422, `errors[]` por campo:
+- Autenticação: cookie de sessão `sid` (HttpOnly), definido pelo login.
+- Todo `POST` exige `X-Requested-With: gex-web` (proteção CSRF); sem ele, a resposta é 403.
+- Erros: `application/problem+json` (RFC 9457), com `code` estável e, no 422, `errors[]` por campo:
   ```json
   { "type": "about:blank", "title": "Conflict", "status": 409, "code": "DUPLICATE_INVOICE",
     "detail": "Já existe uma solicitação com este CNPJ e número de nota fiscal." }
