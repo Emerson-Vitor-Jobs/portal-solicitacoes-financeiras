@@ -4,11 +4,11 @@
 | --- | --- | --- |
 | Base | Vite + React + TypeScript (SPA) | Leve; o build estático é simples de servir no Docker. |
 | UI | Mantine (`@mantine/core`, `@mantine/dates`, `@mantine/notifications`) | Traz tabela, datepicker, notificações e formulários. |
-| Formulário | React Hook Form + Zod | Validação por schema (pode ser compartilhada com o back). |
-| Dados do servidor | TanStack Query | Cuida de cache, loading e mutations; `isPending` trava o botão contra envio duplo. |
+| Formulário | React Hook Form + Zod | Validação por schema; os erros 422 da API voltam para o campo certo. |
+| Dados do servidor | TanStack Query | Cuida de cache, loading e mutations. Contra envio duplo, uma trava síncrona (`useSubmitLock`, um `useRef`) barra o segundo clique antes do re-render, e o `isPending` deixa o botão em carregamento. |
 | Testes | Vitest + Testing Library (+ user-event) + MSW | Mesmo runner do back; MSW mocka a API nos testes de componente. |
 
-## Pontos antes pendentes (fechados em `DECISOES_FUNDACAO.md` §14)
+## Outras escolhas (detalhes em `DECISOES_FUNDACAO.md` §14)
 - Rotas: React Router.
 - Valor em reais: `parseBRLToCents` (gramática BR estrita, oráculo oficial) com máscara estilo banco na digitação,
   feita em componente próprio. `NumberInput` fica de fora porque trabalha com float.

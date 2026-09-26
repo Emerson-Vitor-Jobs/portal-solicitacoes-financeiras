@@ -1,6 +1,6 @@
 # Decisões de arquitetura
 
-As decisões foram tomadas antes do código. Cada uma registra as alternativas consideradas, o motivo da escolha e as
+Cada decisão registra as alternativas consideradas, o motivo da escolha e as
 fontes (RFCs, OWASP, documentação oficial). O registro completo está em [`DECISOES_FUNDACAO.md`](DECISOES_FUNDACAO.md).
 
 | § | Decisão | Escolha, em uma linha |
@@ -14,7 +14,7 @@ fontes (RFCs, OWASP, documentação oficial). O registro completo está em [`DEC
 | 7 | Categoria, nota, busca, tamanhos | categorias fixas; nota canônica garantida no banco; `unaccent` + curingas escapados; limites no Zod e no banco |
 | 8 | Autenticação e sessão | sessão opaca no Postgres (hash SHA-256), 30 min / 8 h, `SameSite=Strict` + header anti-CSRF, argon2id |
 | 9 | Boot, seed e testes | migrations → seed idempotente → servidor; banco de teste separado; cobertura por comportamento |
-| 10 | Organização do trabalho | fundação e contrato congelado primeiro; back e front em paralelo |
+| 10 | Contrato antes da implementação | schemas e `openapi.json` definidos antes das rotas; front construído contra o contrato com MSW |
 | 11 | CNPJ | numérico + alfanumérico (Receita Federal, jul/2026), mesmo algoritmo |
 | 12 | Camada SQL | PgTyped: SQL em arquivo, tipos gerados pelo próprio Postgres, sem ORM |
 | 13 | Runtime | Node 24 LTS com versão fixa na imagem |
