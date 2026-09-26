@@ -74,4 +74,4 @@ curl -s -b fin.txt $API/dashboard/summary
 curl -s -b fin.txt "$API/requests?status=PENDING&supplier=servicos&due_from=2026-09-01&due_to=2026-09-30"
 ```
 
-Pra voltar ao estado original do seed depois: `docker compose down -v && docker compose up --build`.
+Para voltar ao estado original do seed: `docker compose down -v && docker compose up --build`.
